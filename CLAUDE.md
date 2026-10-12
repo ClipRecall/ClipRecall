@@ -21,10 +21,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **任务粒度**：按 docs/project-plan.md 的子任务（T 编号）逐个开发，一次只做一个子任务；完成后执行 docs/manual-test-checklist.md 对应的人工测试（TC 编号）
 - **用户不懂 Mac/Swift 开发**：执行用户要求时，尽量用通俗语言解释当前在做什么、这个功能有什么用——不默认用户了解 Swift、Xcode、系统框架等概念；讨论技术方案时先讲清背景再给结论
 - **工程文件**：避免手改 project.pbxproj；App 工程用 Xcode 16+ 同步文件夹（或 Xcode 27.2+ JSON 格式 .xcproj），核心库走 SPM，工程结构变更交给 Xcode 或生成器
-- **Git 工作流（用户全局偏好，严格遵守）**：
-  1. 写任何新功能代码前，先 `git pull` 拉取最新代码，然后开辟新的 git 分支进行开发（文档 / 配置类修改可沿用对应的 docs 等工作分支，无需另开新分支）；
-  2. 不允许在 main / dev 分支上直接编写代码，commit 前先确认当前分支；
-  3. 出现新文件类型时，判断是否需要添加 .gitignore
+- **Git 工作流（本项目约定，用户明确：main / dev 未开保护，直接推送到 dev）**：
+  1. 日常开发**直接提交并推送到 `dev` 分支**，无需功能分支合并流程；需要隔离的大功能可临时开功能分支；
+  2. 改动前先 `git pull`；commit 前先确认当前分支；
+  3. 出现新文件类型时，判断是否需要添加 .gitignore；
+  4. `main` 保持发布用途，不直接推送
 - **编码流程**：遵守用户全局偏好——先给实现思路经批准后再写代码；适合单元测试的函数必须编写单元测试
 
 ## 仓库现状
