@@ -1,0 +1,19 @@
+# macOS
+.DS_Store
+
+# Xcode
+xcuserdata/
+DerivedData/
+*.xcuserstate
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# 环境变量与密钥（任何仓库都不提交）
+.env
+*.pem
+*.key
+
+# 闭源代码与私有配置（独立私有 git 仓库管理，规则见 docs/architecture.md 第 9 节）
+closed/
