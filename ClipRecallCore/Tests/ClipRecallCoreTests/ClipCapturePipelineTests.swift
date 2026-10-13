@@ -93,4 +93,20 @@ final class ClipCapturePipelineTests: XCTestCase {
         let items = PasteboardWritePayloads.items(from: [missing], blobManager: blobManager)
         XCTAssertTrue(items.isEmpty)
     }
+
+    func testSuppressionWindowSkipsChanges() {
+        let pasteboard = FakeTextPasteboard()
+        pasteboard.setString("回声测试", forType: FormatUTI.plainText)
+        let store = RecentClipsStore(limit: 10)
+        let pipeline = makePipeline(pasteboard: pasteboard, store: store)
+
+        pipeline.suppressChanges(for: 0.3)
+        pipeline.clipboardDidChange(changeCount: 5)   // 静默窗内 → 跳过
+        pipeline.clipboardDidChange(changeCount: 6)   // 静默窗内（多次变化都拦） → 跳过
+        XCTAssertTrue(store.clips.isEmpty)
+
+        Thread.sleep(forTimeInterval: 0.35)
+        pipeline.clipboardDidChange(changeCount: 7)   // 窗口过期 → 正常捕获
+        XCTAssertEqual(store.clips.count, 1)
+    }
 }

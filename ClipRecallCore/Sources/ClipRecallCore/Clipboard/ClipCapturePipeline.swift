@@ -6,6 +6,8 @@ public final class ClipCapturePipeline: ClipboardChangeHandling, @unchecked Send
     private let pasteboard: PasteboardReading
     private let store: RecentClipsStore
     private let blobManager: BlobFileManager
+    private let lock = NSLock()
+    private var suppressionUntil: Date?
 
     public init(
         pasteboard: PasteboardReading,
@@ -17,7 +19,25 @@ public final class ClipCapturePipeline: ClipboardChangeHandling, @unchecked Send
         self.blobManager = blobManager
     }
 
+    /// 抑制指定时长内的所有剪贴板变化（用于写回剪贴板后的"回声"抑制）。
+    /// 期间用户真实的复制也会被忽略——调试阶段可接受，正式版改为内容比对式抑制。
+    public func suppressChanges(for duration: TimeInterval) {
+        lock.lock()
+        suppressionUntil = Date().addingTimeInterval(duration)
+        lock.unlock()
+    }
+
     public func clipboardDidChange(changeCount: Int) {
+        lock.lock()
+        if let until = suppressionUntil {
+            if Date() < until {
+                lock.unlock()
+                return
+            }
+            suppressionUntil = nil
+        }
+        lock.unlock()
+
         let formats = ClipContentCapture.capture(from: pasteboard)
         guard !formats.isEmpty else { return }
         let dispatched = PayloadWritePolicy.apply(to: formats, blobManager: blobManager)

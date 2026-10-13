@@ -31,6 +31,7 @@ final class AppState {
             guard let self else { return }
             Task { @MainActor in
                 self.clips = self.store.clips
+                Log.info("调试列表已刷新：\(self.clips.count) 条", module: .app)
             }
         }
         lifecycle.start(handler: pipeline)
@@ -41,6 +42,8 @@ final class AppState {
         let items = PasteboardWritePayloads.items(from: clip.formats, blobManager: blobManager)
         guard !items.isEmpty else { return }
         pasteboard.write(items)
+        // 抑制"回声"：1 秒静默窗，忽略写回引起的所有剪贴板变化
+        pipeline.suppressChanges(for: 1.0)
         Log.info("调试列表复制回剪贴板：\(clip.primaryType.rawValue)", module: .app)
     }
 }

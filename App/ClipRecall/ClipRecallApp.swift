@@ -15,5 +15,6 @@ struct ClipRecallApp: App {
         MenuBarExtra("ClipRecall", systemImage: "clipboard") {
             DebugListView(appState: appState)
         }
+        .menuBarExtraStyle(.window)
     }
 }
