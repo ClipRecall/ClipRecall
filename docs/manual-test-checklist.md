@@ -15,8 +15,8 @@
 ## 阶段 0
 
 ### TC0.1 代码隔离（对应 T0.1）
-- [ ] `closed/` 目录被外层 git 忽略（git status 不出现任何 closed/ 文件）
-- [ ] closed/ 内部为独立私有 git 仓库，可正常提交推送
+- [x] `closed/` 目录被外层 git 忽略（git status 不出现任何 closed/ 文件）
+- [x] closed/ 内部为独立私有 git 仓库，可正常提交推送
 - [ ] 开源仓库构建不依赖 closed/ 任何代码（删除 closed/ 后仍可完整构建）
 
 ### TC0.3 数据库创建与迁移（对应 T0.3）
