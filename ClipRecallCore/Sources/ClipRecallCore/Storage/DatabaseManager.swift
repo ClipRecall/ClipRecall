@@ -28,13 +28,18 @@ public final class DatabaseManager: @unchecked Sendable {
     }
 
     /// 打开连接池；幂等——已打开时直接返回已有连接。
-    /// 目录不存在时自动创建（含嵌套目录）。
+    /// 目录不存在时自动创建（含嵌套目录）；打开时自动执行待应用的数据库迁移。
     public func open() throws -> DatabasePool {
         lock.lock()
         defer { lock.unlock() }
         if let pool { return pool }
         try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
+
+        var migrator = DatabaseMigrator()
+        DatabaseMigrations.register(&migrator)
+
         let newPool = try DatabasePool(path: databaseURL.path)
+        try migrator.migrate(newPool)
         pool = newPool
         return newPool
     }
