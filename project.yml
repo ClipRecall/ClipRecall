@@ -1,0 +1,30 @@
+name: ClipRecall
+options:
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+targets:
+  ClipRecall:
+    type: application
+    platform: macOS
+    sources:
+      - App/ClipRecall
+    info:
+      path: App/ClipRecall/Info.plist
+      properties:
+        LSUIElement: true
+        LSApplicationCategoryType: public.app-category.productivity
+        CFBundleShortVersionString: "0.1.0"
+        CFBundleVersion: "1"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.andromeda.ClipRecall
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        SWIFT_VERSION: "6.0"
+schemes:
+  ClipRecall:
+    build:
+      targets:
+        ClipRecall: all
+    run:
+      config: Debug

@@ -6,6 +6,9 @@ xcuserdata/
 DerivedData/
 *.xcuserstate
 
+# XcodeGen 生成的工程文件（由 project.yml 生成，不入库）
+*.xcodeproj
+
 # Swift Package Manager
 .build/
 .swiftpm/
