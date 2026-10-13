@@ -35,6 +35,10 @@ final class AppState {
             }
         }
         lifecycle.start(handler: pipeline)
+        // 登记启动基线：监听开始前剪贴板上已有的内容永不记录
+        let baselineFormats = ClipContentCapture.capture(from: pasteboard)
+        pipeline.setBaselineFingerprint(FormatFingerprint.make(from: baselineFormats))
+        Log.info("AppState 初始化完成，开始监听剪贴板（基线 \(pasteboard.changeCount)）", module: .app)
     }
 
     /// 点击调试列表条目：把该条目的格式包写回剪贴板。

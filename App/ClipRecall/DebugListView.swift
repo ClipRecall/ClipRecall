@@ -20,15 +20,20 @@ struct DebugListView: View {
                 }
                 .frame(width: 300, height: 160)
             } else {
-                List(appState.clips) { clip in
-                    Button {
-                        appState.copyBack(clip)
-                    } label: {
-                        row(for: clip)
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 0) {
+                        ForEach(appState.clips) { clip in
+                            Button {
+                                appState.copyBack(clip)
+                            } label: {
+                                row(for: clip)
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
-                    .buttonStyle(.plain)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
                 }
-                .listStyle(.inset)
                 .frame(width: 320, height: 400)
             }
         }

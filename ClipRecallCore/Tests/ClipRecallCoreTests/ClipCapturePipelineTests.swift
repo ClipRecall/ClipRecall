@@ -109,4 +109,47 @@ final class ClipCapturePipelineTests: XCTestCase {
         pipeline.clipboardDidChange(changeCount: 7)   // 窗口过期 → 正常捕获
         XCTAssertEqual(store.clips.count, 1)
     }
+
+    func testBaselineContentIsNeverRecorded() {
+        let pasteboard = FakeTextPasteboard()
+        pasteboard.setString("旧内容", forType: FormatUTI.plainText)
+        let store = RecentClipsStore(limit: 10)
+        let pipeline = makePipeline(pasteboard: pasteboard, store: store)
+        pipeline.setBaselineFingerprint(
+            FormatFingerprint.make(from: ClipContentCapture.capture(from: pasteboard))
+        )
+
+        // 系统抖动：版本号变了但内容还是旧的 → 跳过
+        pipeline.clipboardDidChange(changeCount: 5)
+        XCTAssertTrue(store.clips.isEmpty)
+
+        // 真正的新复制 → 记录
+        pasteboard.setString("新内容", forType: FormatUTI.plainText)
+        pipeline.clipboardDidChange(changeCount: 6)
+        XCTAssertEqual(store.clips.count, 1)
+        XCTAssertEqual(store.clips[0].textPreview, "新内容")
+    }
+
+    func testIdenticalConsecutiveContentIsDeduplicated() {
+        let pasteboard = FakeTextPasteboard()
+        pasteboard.setString("同样内容", forType: FormatUTI.plainText)
+        let store = RecentClipsStore(limit: 10)
+        let pipeline = makePipeline(pasteboard: pasteboard, store: store)
+
+        pipeline.clipboardDidChange(changeCount: 1)
+        pipeline.clipboardDidChange(changeCount: 2)   // 内容相同 → 去重
+        XCTAssertEqual(store.clips.count, 1)
+
+        pasteboard.setString("不同内容", forType: FormatUTI.plainText)
+        pipeline.clipboardDidChange(changeCount: 3)   // 内容不同 → 记录
+        XCTAssertEqual(store.clips.count, 2)
+    }
+
+    func testFingerprintStability() {
+        let a1 = [Format(type: FormatUTI.plainText, payload: .inline(Data("相同".utf8)))]
+        let a2 = [Format(type: FormatUTI.plainText, payload: .inline(Data("相同".utf8)))]
+        let b = [Format(type: FormatUTI.plainText, payload: .inline(Data("不同".utf8)))]
+        XCTAssertEqual(FormatFingerprint.make(from: a1), FormatFingerprint.make(from: a2))
+        XCTAssertNotEqual(FormatFingerprint.make(from: a1), FormatFingerprint.make(from: b))
+    }
 }

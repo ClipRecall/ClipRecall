@@ -8,6 +8,7 @@ public final class ClipCapturePipeline: ClipboardChangeHandling, @unchecked Send
     private let blobManager: BlobFileManager
     private let lock = NSLock()
     private var suppressionUntil: Date?
+    private var baselineFingerprint: String?
 
     public init(
         pasteboard: PasteboardReading,
@@ -27,6 +28,13 @@ public final class ClipCapturePipeline: ClipboardChangeHandling, @unchecked Send
         lock.unlock()
     }
 
+    /// 注册启动基线指纹：监听开始前剪贴板上已有的内容永不作为新条目记录。
+    public func setBaselineFingerprint(_ fingerprint: String) {
+        lock.lock()
+        baselineFingerprint = fingerprint
+        lock.unlock()
+    }
+
     public func clipboardDidChange(changeCount: Int) {
         lock.lock()
         if let until = suppressionUntil {
@@ -36,18 +44,33 @@ public final class ClipCapturePipeline: ClipboardChangeHandling, @unchecked Send
             }
             suppressionUntil = nil
         }
+        let baseline = baselineFingerprint
         lock.unlock()
 
         let formats = ClipContentCapture.capture(from: pasteboard)
         guard !formats.isEmpty else { return }
         let dispatched = PayloadWritePolicy.apply(to: formats, blobManager: blobManager)
+        let fingerprint = FormatFingerprint.make(from: dispatched)
+
+        if let baseline, fingerprint == baseline {
+            Log.info("跳过基线内容（监听前已在剪贴板）", module: .clipboard)
+            return
+        }
+        if let latest = store.clips.first, FormatFingerprint.make(from: latest.formats) == fingerprint {
+            Log.info("跳过与最新一条相同的内容（去重）", module: .clipboard)
+            return
+        }
+
         let clip = Clip(
             primaryType: ClipTypeInference.primaryType(from: dispatched),
             formats: dispatched,
             textPreview: textPreview(from: dispatched)
         )
         store.append(clip)
-        Log.info("捕获新条目：\(clip.primaryType.rawValue)（\(dispatched.count) 个格式）", module: .clipboard)
+        Log.info(
+            "捕获新条目：\(clip.primaryType.rawValue)（\(dispatched.count) 个格式，changeCount=\(changeCount)）",
+            module: .clipboard
+        )
     }
 
     private func textPreview(from formats: [Format]) -> String? {

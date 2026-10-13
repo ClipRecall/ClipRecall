@@ -68,6 +68,7 @@ public final class PasteboardMonitor: @unchecked Sendable {
         }
         lock.unlock()
         if let previous, previous != current {
+            Log.info("检测到剪贴板变化：\(previous) → \(current)", module: .clipboard)
             onChange(current)
         }
     }
