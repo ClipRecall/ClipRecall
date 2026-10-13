@@ -20,13 +20,13 @@ final class FakePasteboard: PasteboardReading, @unchecked Sendable {
 }
 
 /// XCTestExpectation 的 Sendable 包装（回调在后台队列执行）。
-private final class ExpectationBox: @unchecked Sendable {
+final class ExpectationBox: @unchecked Sendable {
     let expectation: XCTestExpectation
     init(_ expectation: XCTestExpectation) { self.expectation = expectation }
 }
 
 /// 值的 Sendable 包装（回调线程写、测试线程读）。
-private final class IntBox: @unchecked Sendable {
+final class IntBox: @unchecked Sendable {
     var value: Int?
     init(_ value: Int? = nil) { self.value = value }
 }
