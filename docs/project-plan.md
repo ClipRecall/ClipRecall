@@ -37,7 +37,7 @@
 |---|---|---|---|---|
 | T0.2.1 | [x] | Xcode 工程 + MenuBarExtra 空壳 | App 可启动，菜单栏图标可见 | — |
 | T0.2.2 | [x] | ClipRecallCore SPM 包 | 包结构 + 模块目录（架构 3.1） | — |
-| T0.2.3 | [ ] | 构建配置 | 最低 macOS 14、沙盒与 Hardened Runtime 预留、entitlements | — |
+| T0.2.3 | [x] | 构建配置 | 最低 macOS 14、沙盒与 Hardened Runtime 预留、entitlements | — |
 
 ### T0.3 数据模型
 

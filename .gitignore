@@ -9,6 +9,9 @@ DerivedData/
 # XcodeGen 生成的工程文件（由 project.yml 生成，不入库）
 *.xcodeproj
 
+# 本地构建产物目录
+build/
+
 # Swift Package Manager
 .build/
 .swiftpm/

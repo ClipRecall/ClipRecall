@@ -26,6 +26,9 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.andromeda.ClipRecall
         MACOSX_DEPLOYMENT_TARGET: "14.0"
         SWIFT_VERSION: "6.0"
+        CODE_SIGN_ENTITLEMENTS: App/ClipRecall/ClipRecall.entitlements
+        ENABLE_APP_SANDBOX: YES
+        ENABLE_HARDENED_RUNTIME: YES
 schemes:
   ClipRecall:
     build:
