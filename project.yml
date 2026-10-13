@@ -3,12 +3,17 @@ options:
   deploymentTarget:
     macOS: "14.0"
   createIntermediateGroups: true
+packages:
+  ClipRecallCore:
+    path: ClipRecallCore
 targets:
   ClipRecall:
     type: application
     platform: macOS
     sources:
       - App/ClipRecall
+    dependencies:
+      - package: ClipRecallCore
     info:
       path: App/ClipRecall/Info.plist
       properties:

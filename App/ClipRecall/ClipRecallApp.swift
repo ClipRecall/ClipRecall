@@ -1,4 +1,5 @@
 import SwiftUI
+import ClipRecallCore
 
 @main
 struct ClipRecallApp: App {
@@ -12,6 +13,9 @@ struct ClipRecallApp: App {
                 Text("空壳版本：功能开发中")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                Text("Core v\(clipRecallCoreVersion)")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
             }
             .padding()
         }
