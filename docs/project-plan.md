@@ -45,7 +45,7 @@
 |---|---|---|---|---|
 | T0.3.1 | [x] | 枚举与基础类型 | ClipType / SourceApp / FormatMetadata | — |
 | T0.3.2 | [x] | Clip 与 Format 模型 | 模型定义 + Payload 枚举（架构 4） | — |
-| T0.3.3 | [ ] | GRDB 集成 | DatabasePool 单例 + 连接管理 | TC0.3 |
+| T0.3.3 | [x] | GRDB 集成 | DatabasePool 单例 + 连接管理 | TC0.3 |
 | T0.3.4 | [ ] | migration v1 | clips / formats 表 + 迁移框架 | TC0.3 |
 | T0.3.5 | [ ] | 大对象文件管理器 | blobs 目录读写、路径生成 | — |
 
