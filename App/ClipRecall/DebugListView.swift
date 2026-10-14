@@ -81,6 +81,12 @@ struct DebugListView: View {
     }
 
     private func previewText(for clip: Clip) -> String {
+        // 链接条目显示域名
+        if clip.primaryType == .url,
+           let preview = clip.textPreview,
+           let info = URLDetection.detect(in: preview) {
+            return info.domain
+        }
         if let textPreview = clip.textPreview, !textPreview.isEmpty {
             return textPreview
         }
@@ -88,6 +94,7 @@ struct DebugListView: View {
         case .image: return "图片"
         case .file: return "文件"
         case .richText: return "富文本"
+        case .url: return "链接"
         default: return "（空内容）"
         }
     }

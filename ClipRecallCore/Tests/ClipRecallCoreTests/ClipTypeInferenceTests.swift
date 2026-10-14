@@ -33,4 +33,14 @@ final class ClipTypeInferenceTests: XCTestCase {
         let mixed = formats(FormatUTI.plainText, FormatUTI.png)
         XCTAssertEqual(ClipTypeInference.primaryType(from: mixed), .image)
     }
+
+    func testPlainURLInfersURL() {
+        let formats = [Format(type: FormatUTI.plainText, payload: .inline(Data("https://example.com".utf8)))]
+        XCTAssertEqual(ClipTypeInference.primaryType(from: formats), .url)
+    }
+
+    func testSentenceWithURLStaysText() {
+        let formats = [Format(type: FormatUTI.plainText, payload: .inline(Data("请看 https://example.com".utf8)))]
+        XCTAssertEqual(ClipTypeInference.primaryType(from: formats), .text)
+    }
 }
