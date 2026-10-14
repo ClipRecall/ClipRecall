@@ -27,6 +27,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   3. 出现新文件类型时，判断是否需要添加 .gitignore；
   4. `main` 保持发布用途，不直接推送
 - **编码流程**：遵守用户全局偏好——先给实现思路经批准后再写代码；适合单元测试的函数必须编写单元测试
+- **测试相关**：每完成一个任务后需要思考并对照docs/manual-test-checklist.md内容，是否需要用户手工测试，同时检查docs/manual-test-checklist.md内的手工测试条目是否合理
 
 ## 仓库现状
 
