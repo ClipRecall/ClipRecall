@@ -15,6 +15,7 @@ final class AppState {
     private let pasteboard = NSPasteboardAdapter()
     private let store = RecentClipsStore(limit: 50)
     private let blobManager = BlobFileManager()
+    let faviconFetcher = FaviconFetcher()
     private let monitor: PasteboardMonitor
     private let lifecycle: ClipboardMonitorLifecycle
     private let pipeline: ClipCapturePipeline

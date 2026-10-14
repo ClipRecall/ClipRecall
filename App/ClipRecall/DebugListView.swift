@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 import ClipRecallCore
 
@@ -66,12 +67,10 @@ struct DebugListView: View {
 
     private func row(for clip: Clip) -> some View {
         HStack(spacing: 8) {
-            Image(systemName: iconName(for: clip.primaryType))
-                .foregroundStyle(.secondary)
-                .frame(width: 18)
+            leadingIcon(for: clip)
             VStack(alignment: .leading, spacing: 2) {
                 Text(previewText(for: clip))
-                    .lineLimit(1)
+                    .lineLimit(clip.primaryType == .url ? nil : 1)
                 Text(clip.capturedAt, style: .time)
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
@@ -80,13 +79,21 @@ struct DebugListView: View {
         .padding(.vertical, 2)
     }
 
-    private func previewText(for clip: Clip) -> String {
-        // 链接条目显示域名
+    @ViewBuilder
+    private func leadingIcon(for clip: Clip) -> some View {
         if clip.primaryType == .url,
            let preview = clip.textPreview,
            let info = URLDetection.detect(in: preview) {
-            return info.domain
+            FaviconView(domain: info.domain, fetcher: appState.faviconFetcher)
+        } else {
+            Image(systemName: iconName(for: clip.primaryType))
+                .foregroundStyle(.secondary)
+                .frame(width: 18)
         }
+    }
+
+    private func previewText(for clip: Clip) -> String {
+        // 链接条目显示完整网址（域名仍用于图标获取与识别）
         if let textPreview = clip.textPreview, !textPreview.isEmpty {
             return textPreview
         }
@@ -108,6 +115,31 @@ struct DebugListView: View {
         case .url: return "link"
         case .code: return "chevron.left.forwardslash.chevron.right"
         case .color: return "paintpalette"
+        }
+    }
+}
+
+/// 网站图标视图：异步加载，失败时显示默认链接图标。
+private struct FaviconView: View {
+    let domain: String
+    let fetcher: FaviconFetcher
+    @State private var imageData: Data?
+
+    var body: some View {
+        Group {
+            if let imageData, let image = NSImage(data: imageData) {
+                Image(nsImage: image)
+                    .resizable()
+                    .interpolation(.high)
+                    .frame(width: 16, height: 16)
+            } else {
+                Image(systemName: "link")
+                    .foregroundStyle(.secondary)
+                    .frame(width: 16, height: 16)
+            }
+        }
+        .task(id: domain) {
+            imageData = await fetcher.fetch(domain: domain)
         }
     }
 }
