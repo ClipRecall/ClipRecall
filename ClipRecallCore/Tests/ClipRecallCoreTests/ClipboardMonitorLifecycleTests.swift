@@ -71,4 +71,22 @@ final class ClipboardMonitorLifecycleTests: XCTestCase {
         wait(for: [box.expectation], timeout: 0.3)
         XCTAssertFalse(lifecycle.isRunning)
     }
+
+    func testRestartAfterStopWorks() {
+        let pasteboard = FakePasteboard()
+        let monitor = PasteboardMonitor(pasteboard: pasteboard, interval: interval)
+        let lifecycle = ClipboardMonitorLifecycle(monitor: monitor)
+        let box = ExpectationBox(expectation(description: "停止后再启动应恢复监听"))
+        box.expectation.assertForOverFulfill = true
+
+        lifecycle.start { _ in box.expectation.fulfill() }
+        lifecycle.stop()
+        pasteboard.bump()   // 停止期间的变化：不回调，且成为新基线
+        Thread.sleep(forTimeInterval: 0.15)
+
+        lifecycle.start { _ in box.expectation.fulfill() }
+        pasteboard.bump()   // 重启后的变化 → 回调
+        wait(for: [box.expectation], timeout: 1.0)
+        lifecycle.stop()
+    }
 }

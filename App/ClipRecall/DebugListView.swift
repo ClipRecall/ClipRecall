@@ -6,38 +6,62 @@ struct DebugListView: View {
     let appState: AppState
 
     var body: some View {
-        Group {
-            if appState.clips.isEmpty {
-                VStack(spacing: 8) {
-                    Image(systemName: "clipboard")
-                        .font(.largeTitle)
-                        .foregroundStyle(.secondary)
-                    Text("暂无历史")
-                        .font(.headline)
-                    Text("去复制点什么吧")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                .frame(width: 300, height: 160)
-            } else {
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 0) {
-                        ForEach(appState.clips) { clip in
-                            Button {
-                                appState.copyBack(clip)
-                            } label: {
-                                row(for: clip)
-                            }
-                            .buttonStyle(.plain)
-                        }
+        VStack(spacing: 0) {
+            header
+            Group {
+                if appState.clips.isEmpty {
+                    VStack(spacing: 8) {
+                        Image(systemName: "clipboard")
+                            .font(.largeTitle)
+                            .foregroundStyle(.secondary)
+                        Text("暂无历史")
+                            .font(.headline)
+                        Text(appState.isPaused ? "监听已暂停" : "去复制点什么吧")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
+                    .frame(width: 300, height: 150)
+                } else {
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 0) {
+                            ForEach(appState.clips) { clip in
+                                Button {
+                                    appState.copyBack(clip)
+                                } label: {
+                                    row(for: clip)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                    }
+                    .frame(width: 320, height: 400)
                 }
-                .frame(width: 320, height: 400)
             }
         }
         .padding(.vertical, 4)
+    }
+
+    private var header: some View {
+        HStack {
+            Button(action: appState.togglePause) {
+                Label(
+                    appState.isPaused ? "恢复记录" : "暂停记录",
+                    systemImage: appState.isPaused ? "play.circle" : "pause.circle"
+                )
+            }
+            Spacer()
+            Button(action: appState.openAccessibilitySettings) {
+                Label(
+                    "辅助功能",
+                    systemImage: appState.hasAccessibilityPermission ? "checkmark.seal" : "exclamationmark.triangle"
+                )
+            }
+            .help(appState.hasAccessibilityPermission ? "辅助功能权限已开启" : "辅助功能权限未开启，点击打开系统设置")
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
     }
 
     private func row(for clip: Clip) -> some View {
