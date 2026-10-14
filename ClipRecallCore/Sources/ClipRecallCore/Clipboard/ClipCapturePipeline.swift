@@ -57,15 +57,17 @@ public final class ClipCapturePipeline: ClipboardChangeHandling, @unchecked Send
            let plainIndex = dispatched.firstIndex(where: { $0.type == FormatUTI.plainText }) {
             dispatched[plainIndex].metadata.codeLanguage = language
         }
-        let fingerprint = FormatFingerprint.make(from: dispatched)
+        let identity = FormatFingerprint.contentIdentity(from: dispatched)
 
-        if let baseline, fingerprint == baseline {
-            Log.info("跳过基线内容（监听前已在剪贴板）", module: .clipboard)
-            return
-        }
-        if let latest = store.clips.first, FormatFingerprint.make(from: latest.formats) == fingerprint {
-            Log.info("跳过与最新一条相同的内容（去重）", module: .clipboard)
-            return
+        if let baseline {
+            if identity == baseline {
+                // 一次性基线：挡住启动抖动后即作废——之后复制相同内容应正常记录
+                Log.info("跳过基线内容（监听前已在剪贴板）", module: .clipboard)
+                baselineFingerprint = nil
+                return
+            }
+            // 首个不同内容出现 → 基线使命结束
+            baselineFingerprint = nil
         }
 
         let clip = Clip(

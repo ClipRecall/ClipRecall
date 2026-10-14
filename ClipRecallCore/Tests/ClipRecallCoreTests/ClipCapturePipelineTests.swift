@@ -116,7 +116,7 @@ final class ClipCapturePipelineTests: XCTestCase {
         let store = RecentClipsStore(limit: 10)
         let pipeline = makePipeline(pasteboard: pasteboard, store: store)
         pipeline.setBaselineFingerprint(
-            FormatFingerprint.make(from: ClipContentCapture.capture(from: pasteboard))
+            FormatFingerprint.contentIdentity(from: ClipContentCapture.capture(from: pasteboard))
         )
 
         // 系统抖动：版本号变了但内容还是旧的 → 跳过
@@ -128,6 +128,29 @@ final class ClipCapturePipelineTests: XCTestCase {
         pipeline.clipboardDidChange(changeCount: 6)
         XCTAssertEqual(store.clips.count, 1)
         XCTAssertEqual(store.clips[0].textPreview, "新内容")
+    }
+
+    func testBaselineContentRecordableAfterOtherCopies() {
+        // 回归："monitor" 案例——基线内容在其它复制发生后应可正常记录（一次性基线）
+        let pasteboard = FakeTextPasteboard()
+        pasteboard.setString("monitor", forType: FormatUTI.plainText)
+        let store = RecentClipsStore(limit: 10)
+        let pipeline = makePipeline(pasteboard: pasteboard, store: store)
+        pipeline.setBaselineFingerprint(
+            FormatFingerprint.contentIdentity(from: ClipContentCapture.capture(from: pasteboard))
+        )
+
+        pipeline.clipboardDidChange(changeCount: 5)   // 启动抖动（基线内容）→ 跳过
+        XCTAssertTrue(store.clips.isEmpty)
+
+        pasteboard.setString("A", forType: FormatUTI.plainText)
+        pipeline.clipboardDidChange(changeCount: 6)   // 其它内容 → 记录，基线失效
+        XCTAssertEqual(store.clips.count, 1)
+
+        pasteboard.setString("monitor", forType: FormatUTI.plainText)
+        pipeline.clipboardDidChange(changeCount: 7)   // 再复制基线内容 → 应正常记录
+        XCTAssertEqual(store.clips.count, 2)
+        XCTAssertEqual(store.clips[0].textPreview, "monitor")
     }
 
     func testIdenticalConsecutiveContentIsDeduplicated() {

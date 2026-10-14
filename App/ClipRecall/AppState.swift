@@ -41,7 +41,7 @@ final class AppState {
         lifecycle.start(handler: pipeline)
         // 登记启动基线：监听开始前剪贴板上已有的内容永不记录
         let baselineFormats = ClipContentCapture.capture(from: pasteboard)
-        pipeline.setBaselineFingerprint(FormatFingerprint.make(from: baselineFormats))
+        pipeline.setBaselineFingerprint(FormatFingerprint.contentIdentity(from: baselineFormats))
         Log.info("AppState 初始化完成，开始监听剪贴板（基线 \(pasteboard.changeCount)）", module: .app)
     }
 

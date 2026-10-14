@@ -21,8 +21,12 @@ public final class RecentClipsStore: @unchecked Sendable {
         return items
     }
 
+    /// 追加条目；与列表中任一条内容相同（身份一致）时，移除旧条目、新条目置顶（时间更新）。
+    /// 全局去重（T1.5.1）由存储层负责——T1.6 数据库入库时沿用同一策略。
     public func append(_ clip: Clip) {
         lock.lock()
+        let identity = FormatFingerprint.contentIdentity(from: clip.formats)
+        items.removeAll { FormatFingerprint.contentIdentity(from: $0.formats) == identity }
         items.insert(clip, at: 0)
         if items.count > limit {
             items.removeLast(items.count - limit)

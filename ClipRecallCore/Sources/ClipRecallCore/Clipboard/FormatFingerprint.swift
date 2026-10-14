@@ -17,6 +17,17 @@ public enum FormatFingerprint {
         return String(hash, radix: 16)
     }
 
+    /// 内容身份（用于去重 / 基线 / 回声抑制）：
+    /// 文本条目只看纯文本内容——系统异步补格式会让同一内容的格式包形态不同，
+    /// 按完整格式包比对会导致去重失灵；图片 / 文件等无纯文本的条目仍按完整内容。
+    public static func contentIdentity(from formats: [Format]) -> String {
+        if let plain = formats.first(where: { $0.type == FormatUTI.plainText }),
+           case .inline(let data) = plain.payload {
+            return "text:" + make(from: [Format(type: FormatUTI.plainText, payload: .inline(data))])
+        }
+        return "full:" + make(from: formats)
+    }
+
     private static func combine(_ hash: UInt64, _ string: String) -> UInt64 {
         combine(hash, Data(string.utf8))
     }
