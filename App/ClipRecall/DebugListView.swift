@@ -81,9 +81,22 @@ struct DebugListView: View {
 
     @ViewBuilder
     private func leadingIcon(for clip: Clip) -> some View {
-        if clip.primaryType == .url,
+        if clip.primaryType == .color,
            let preview = clip.textPreview,
-           let info = URLDetection.detect(in: preview) {
+           let info = ColorDetection.detect(in: preview) {
+            Circle()
+                .fill(
+                    Color(
+                        red: Double(info.red) / 255,
+                        green: Double(info.green) / 255,
+                        blue: Double(info.blue) / 255
+                    )
+                )
+                .frame(width: 16, height: 16)
+                .overlay(Circle().stroke(.secondary.opacity(0.3), lineWidth: 1))
+        } else if clip.primaryType == .url,
+                  let preview = clip.textPreview,
+                  let info = URLDetection.detect(in: preview) {
             FaviconView(domain: info.domain, fetcher: appState.faviconFetcher)
         } else {
             Image(systemName: iconName(for: clip.primaryType))
@@ -92,14 +105,46 @@ struct DebugListView: View {
         }
     }
 
+    /// 统一的"类型 · 时间"角标。
     private func captionText(for clip: Clip) -> String {
         let time = clip.capturedAt.formatted(date: .omitted, time: .shortened)
-        if clip.primaryType == .code,
-           let plain = clip.formats.first(where: { $0.type == FormatUTI.plainText }),
-           let language = plain.metadata.codeLanguage {
-            return "\(language) · \(time)"
+        let label: String
+        switch clip.primaryType {
+        case .code:
+            if let plain = clip.formats.first(where: { $0.type == FormatUTI.plainText }),
+               let language = plain.metadata.codeLanguage {
+                label = language
+            } else {
+                label = "代码"
+            }
+        case .text:
+            if let preview = clip.textPreview {
+                if EmailDetection.detect(in: preview) != nil {
+                    label = "邮箱"
+                } else if DateDetection.detect(in: preview) != nil {
+                    label = "日期"
+                } else {
+                    label = "文本"
+                }
+            } else {
+                label = "文本"
+            }
+        default:
+            label = typeName(clip.primaryType)
         }
-        return time
+        return "\(label) · \(time)"
+    }
+
+    private func typeName(_ type: ClipType) -> String {
+        switch type {
+        case .text: return "文本"
+        case .richText: return "富文本"
+        case .image: return "图片"
+        case .file: return "文件"
+        case .url: return "链接"
+        case .code: return "代码"
+        case .color: return "颜色"
+        }
     }
 
     private func previewText(for clip: Clip) -> String {
