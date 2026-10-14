@@ -49,7 +49,14 @@ public final class ClipCapturePipeline: ClipboardChangeHandling, @unchecked Send
 
         let formats = ClipContentCapture.capture(from: pasteboard)
         guard !formats.isEmpty else { return }
-        let dispatched = PayloadWritePolicy.apply(to: formats, blobManager: blobManager)
+        var dispatched = PayloadWritePolicy.apply(to: formats, blobManager: blobManager)
+        // 代码条目：把语言名写入首个纯文本格式的元数据
+        if ClipTypeInference.primaryType(from: dispatched) == .code,
+           let plainText = ClipTypeInference.plainTextContent(from: dispatched),
+           let language = CodeLanguageDetection.detect(in: plainText),
+           let plainIndex = dispatched.firstIndex(where: { $0.type == FormatUTI.plainText }) {
+            dispatched[plainIndex].metadata.codeLanguage = language
+        }
         let fingerprint = FormatFingerprint.make(from: dispatched)
 
         if let baseline, fingerprint == baseline {

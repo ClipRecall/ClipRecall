@@ -152,4 +152,18 @@ final class ClipCapturePipelineTests: XCTestCase {
         XCTAssertEqual(FormatFingerprint.make(from: a1), FormatFingerprint.make(from: a2))
         XCTAssertNotEqual(FormatFingerprint.make(from: a1), FormatFingerprint.make(from: b))
     }
+
+    func testCodeChangeAttachesLanguageMetadata() {
+        let pasteboard = FakeTextPasteboard()
+        pasteboard.setString("def greet():\n    print(\"hello\")", forType: FormatUTI.plainText)
+        let store = RecentClipsStore(limit: 10)
+        let pipeline = makePipeline(pasteboard: pasteboard, store: store)
+
+        pipeline.clipboardDidChange(changeCount: 1)
+
+        XCTAssertEqual(store.clips.count, 1)
+        XCTAssertEqual(store.clips[0].primaryType, .code)
+        let plain = store.clips[0].formats.first(where: { $0.type == FormatUTI.plainText })
+        XCTAssertEqual(plain?.metadata.codeLanguage, "Python")
+    }
 }

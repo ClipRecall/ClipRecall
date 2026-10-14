@@ -71,7 +71,7 @@ struct DebugListView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(previewText(for: clip))
                     .lineLimit(clip.primaryType == .url ? nil : 1)
-                Text(clip.capturedAt, style: .time)
+                Text(captionText(for: clip))
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
@@ -90,6 +90,16 @@ struct DebugListView: View {
                 .foregroundStyle(.secondary)
                 .frame(width: 18)
         }
+    }
+
+    private func captionText(for clip: Clip) -> String {
+        let time = clip.capturedAt.formatted(date: .omitted, time: .shortened)
+        if clip.primaryType == .code,
+           let plain = clip.formats.first(where: { $0.type == FormatUTI.plainText }),
+           let language = plain.metadata.codeLanguage {
+            return "\(language) · \(time)"
+        }
+        return time
     }
 
     private func previewText(for clip: Clip) -> String {
