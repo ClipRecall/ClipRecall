@@ -57,10 +57,6 @@ struct DebugListView: View {
                     systemImage: appState.isPaused ? "play.circle" : "pause.circle"
                 )
             }
-            Button("测试数据") {
-                appState.seedTestData()
-            }
-            .help("生成 5000 条测试数据（重启后自动清理回默认上限）")
             Spacer()
             Button {
                 showPermissionGuide.toggle()

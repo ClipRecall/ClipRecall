@@ -97,25 +97,6 @@ final class AppState {
         return thumbnailService.thumbnail(for: data)
     }
 
-    /// 调试：生成 5000 条测试数据（临时把保留上限调到 5000；重启后恢复默认并自动清理）。
-    func seedTestData() {
-        let clips = (0..<5000).map { index in
-            Clip(
-                primaryType: .text,
-                formats: [Format(type: FormatUTI.plainText, payload: .inline(Data("测试条目 \(index)".utf8)))],
-                textPreview: "测试条目 \(index)"
-            )
-        }
-        do {
-            repository.setRetentionPolicy(RetentionPolicy(maxCount: 5000, maxDays: 0))
-            try repository.bulkInsertForTesting(clips)
-            reloadClips()
-            Log.info("已生成 5000 条测试数据", module: .app)
-        } catch {
-            Log.error("生成测试数据失败：\(error)", module: .app)
-        }
-    }
-
     /// 辅助功能权限是否已开启（直接粘贴功能需要）。
     var hasAccessibilityPermission: Bool {
         AXIsProcessTrusted()
