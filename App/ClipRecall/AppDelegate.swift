@@ -41,6 +41,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             closePopover()
         } else {
             guard let button = statusItem.button else { return }
+            // 记录面板打开前的 App——直接粘贴的目标
+            appState.previousApp = NSWorkspace.shared.frontmostApplication
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         }
     }

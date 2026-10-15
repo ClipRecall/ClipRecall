@@ -93,6 +93,15 @@ struct DebugListView: View {
                     systemImage: appState.isPaused ? "play.circle" : "pause.circle"
                 )
             }
+            Button {
+                appState.directPasteEnabled.toggle()
+            } label: {
+                Label(
+                    "直接粘贴",
+                    systemImage: appState.directPasteEnabled ? "arrow.uturn.right.circle.fill" : "arrow.uturn.right.circle"
+                )
+            }
+            .help("开启后点击/回车自动粘贴到之前的 App；关闭则进剪贴板手动 Cmd+V（默认关闭，T2.6.2 设置页接管）")
             Spacer()
             Button {
                 showPermissionGuide.toggle()
@@ -111,7 +120,8 @@ struct DebugListView: View {
     /// 复制选中条目并自动关闭面板（默认行为：进剪贴板、用户手动 Cmd+V；自动粘贴开关见 T2.6.2 明细 ⑤）。
     private func copyAndClose(_ clip: Clip) {
         appState.copyBack(clip)
-        onClose?()
+        onClose?()   // 先关面板释放激活，再执行直接粘贴（若开关开启）
+        appState.performDirectPasteIfEnabled()
     }
 
     /// 仅未授权时显示的引导卡（授权后自动消失）。
