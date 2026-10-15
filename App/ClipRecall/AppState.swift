@@ -44,13 +44,15 @@ final class AppState {
         // 登记启动基线：监听开始前剪贴板上已有的内容永不记录
         let baselineFormats = ClipContentCapture.capture(from: pasteboard)
         pipeline.setBaselineFingerprint(FormatFingerprint.contentIdentity(from: baselineFormats))
-        // 从数据库加载历史（重启后历史仍在）
+        // 启动时执行一次保留策略（如上次会话的测试数据超限，自动清理），再从数据库加载历史
+        try? repository.enforceRetentionPolicy()
         reloadClips()
         Log.info("AppState 初始化完成，开始监听剪贴板（基线 \(pasteboard.changeCount)）", module: .app)
     }
 
     private func reloadClips() {
-        clips = (try? repository.recent(limit: 50)) ?? []
+        // 调试阶段读取全部历史（虚拟化保证 5000 条也流畅）；正式面板可再定义展示上限
+        clips = (try? repository.recent(limit: 5000)) ?? []
         Log.info("调试列表已刷新：\(clips.count) 条", module: .app)
     }
 
@@ -93,6 +95,25 @@ final class AppState {
     func thumbnail(for clip: Clip) async -> Data? {
         guard let data = imageData(for: clip) else { return nil }
         return thumbnailService.thumbnail(for: data)
+    }
+
+    /// 调试：生成 5000 条测试数据（临时把保留上限调到 5000；重启后恢复默认并自动清理）。
+    func seedTestData() {
+        let clips = (0..<5000).map { index in
+            Clip(
+                primaryType: .text,
+                formats: [Format(type: FormatUTI.plainText, payload: .inline(Data("测试条目 \(index)".utf8)))],
+                textPreview: "测试条目 \(index)"
+            )
+        }
+        do {
+            repository.setRetentionPolicy(RetentionPolicy(maxCount: 5000, maxDays: 0))
+            try repository.bulkInsertForTesting(clips)
+            reloadClips()
+            Log.info("已生成 5000 条测试数据", module: .app)
+        } catch {
+            Log.error("生成测试数据失败：\(error)", module: .app)
+        }
     }
 
     /// 辅助功能权限是否已开启（直接粘贴功能需要）。

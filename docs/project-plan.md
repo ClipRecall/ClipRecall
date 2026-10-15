@@ -137,7 +137,7 @@
 | # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
 | T2.1.1 | [x] | MenuBarExtra entry | icon + click to open | TC2.1 |
-| T2.1.2 | [ ] | List rendering | List virtualization + scroll performance | TC2.1 |
+| T2.1.2 | [x] | List rendering | List virtualization + scroll performance | TC2.1 |
 | T2.1.3 | [ ] | Entry row views ×6 | text / image / file / URL / code / color rows | TC2.1 |
 
 ### T2.2 Keyboard interaction

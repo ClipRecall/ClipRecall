@@ -87,7 +87,7 @@
 ### TC2.1 Panel & rendering (T2.1)
 - [x] Clicking the menu bar icon opens the panel
 - [ ] Text / image / file / URL / code / color entries all render correctly
-- [ ] Scrolling 5000 entries stays smooth (list virtualization; temporarily raise the retention cap to 5000 first)
+- [x] Scrolling 5000 entries stays smooth (list virtualization; verified via the "Test data" debug button, auto-cleaned on restart)
 
 ### TC2.2 Keyboard interaction (T2.2)
 - [ ] Full keyboard flow: open → arrow-select → Enter to copy → Esc to close

@@ -182,6 +182,29 @@ final class ClipRepositoryTests: XCTestCase {
         XCTAssertEqual(fetched[0].formats[0].metadata.sensitiveKind, .cardNumber)
     }
 
+    func testBulkInsertForTestingIsFast() throws {
+        let clips = (0..<5000).map { index in
+            makeClip("批量条目 \(index)")
+        }
+        let start = Date()
+        try repository.bulkInsertForTesting(clips)
+        let elapsed = Date().timeIntervalSince(start)
+
+        let fetched = try repository.fetchRecent(limit: 6000)
+        XCTAssertEqual(fetched.count, 5000)
+        XCTAssertLessThan(elapsed, 10, "5000 条批量插入应在秒级完成，实际 \(elapsed) 秒")
+    }
+
+    func testEnforceRetentionPolicyCleansUp() throws {
+        try repository.setRetentionPolicy(RetentionPolicy(maxCount: 2, maxDays: 0))
+        let clips = (0..<5).map { index in
+            makeClip("超限条目 \(index)")
+        }
+        try repository.bulkInsertForTesting(clips)
+        try repository.enforceRetentionPolicy()
+        XCTAssertEqual(try repository.fetchRecent(limit: 10).count, 2)
+    }
+
     func testCodeLanguageMetadataRoundTrip() throws {
         var format = Format(type: FormatUTI.plainText, payload: .inline(Data("def f():\n    print(1)".utf8)))
         format.metadata.codeLanguage = "Python"
