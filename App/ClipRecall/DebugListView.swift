@@ -6,9 +6,14 @@ import ClipRecallCore
 struct DebugListView: View {
     let appState: AppState
 
+    @State private var showPermissionGuide = false
+
     var body: some View {
         VStack(spacing: 0) {
             header
+            if showPermissionGuide, !appState.hasAccessibilityPermission {
+                permissionGuide
+            }
             Group {
                 if appState.clips.isEmpty {
                     VStack(spacing: 8) {
@@ -53,16 +58,39 @@ struct DebugListView: View {
                 )
             }
             Spacer()
-            Button(action: appState.openAccessibilitySettings) {
+            Button {
+                showPermissionGuide.toggle()
+            } label: {
                 Label(
                     "辅助功能",
                     systemImage: appState.hasAccessibilityPermission ? "checkmark.seal" : "exclamationmark.triangle"
                 )
             }
-            .help(appState.hasAccessibilityPermission ? "辅助功能权限已开启" : "辅助功能权限未开启，点击打开系统设置")
+            .help(appState.hasAccessibilityPermission ? "辅助功能权限已开启" : "辅助功能权限未开启，点击查看引导")
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
+    }
+
+    /// 仅未授权时显示的引导卡（授权后自动消失）。
+    private var permissionGuide: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Image(systemName: "exclamationmark.triangle")
+                    .foregroundStyle(.orange)
+                Text("辅助功能权限未开启")
+                    .font(.callout)
+            }
+            Text("直接粘贴功能（阶段 2 上线）需要此权限：允许 ClipRecall 把内容粘贴进其他 App。")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Button("打开系统设置") {
+                appState.openAccessibilitySettings()
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 12)
+        .padding(.bottom, 8)
     }
 
     private func row(for clip: Clip) -> some View {
