@@ -2,7 +2,7 @@ import Foundation
 
 /// 内存历史缓存：调试阶段保存最近 N 个采集结果（T1.6 入库后由数据库替代）。
 /// 最新在前；超过上限自动淘汰最旧。
-public final class RecentClipsStore: @unchecked Sendable {
+public final class RecentClipsStore: ClipStoring, @unchecked Sendable {
     private let lock = NSLock()
     private var items: [Clip] = []
     private let limit: Int
@@ -24,6 +24,10 @@ public final class RecentClipsStore: @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
         return items
+    }
+
+    public func recent(limit: Int) throws -> [Clip] {
+        Array(clips.prefix(limit))
     }
 
     /// 追加条目。存储层负责两个策略（T1.5，判定逻辑见 ClipAppendPolicy）：

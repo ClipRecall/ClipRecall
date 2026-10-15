@@ -21,7 +21,7 @@ final class ClipCapturePipelineTests: XCTestCase {
     }
 
     private func makePipeline(pasteboard: PasteboardReading, store: RecentClipsStore) -> ClipCapturePipeline {
-        ClipCapturePipeline(pasteboard: pasteboard, store: store, blobManager: blobManager)
+        ClipCapturePipeline(pasteboard: pasteboard, storage: store, blobManager: blobManager)
     }
 
     func testTextChangeProducesClip() {

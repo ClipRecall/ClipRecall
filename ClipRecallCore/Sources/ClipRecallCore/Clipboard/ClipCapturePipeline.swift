@@ -4,7 +4,7 @@ import Foundation
 /// 实现 ClipboardChangeHandling，直接交给生命周期管家使用。
 public final class ClipCapturePipeline: ClipboardChangeHandling, @unchecked Sendable {
     private let pasteboard: PasteboardReading
-    private let store: RecentClipsStore
+    private let storage: ClipStoring
     private let blobManager: BlobFileManager
     private let lock = NSLock()
     private var suppressionUntil: Date?
@@ -12,11 +12,11 @@ public final class ClipCapturePipeline: ClipboardChangeHandling, @unchecked Send
 
     public init(
         pasteboard: PasteboardReading,
-        store: RecentClipsStore,
+        storage: ClipStoring,
         blobManager: BlobFileManager
     ) {
         self.pasteboard = pasteboard
-        self.store = store
+        self.storage = storage
         self.blobManager = blobManager
     }
 
@@ -75,7 +75,12 @@ public final class ClipCapturePipeline: ClipboardChangeHandling, @unchecked Send
             formats: dispatched,
             textPreview: textPreview(from: dispatched)
         )
-        store.append(clip)
+        do {
+            try storage.append(clip)
+        } catch {
+            Log.error("条目写入存储失败：\(error)", module: .clipboard)
+            return
+        }
         Log.info(
             "捕获新条目：\(clip.primaryType.rawValue)（\(dispatched.count) 个格式，changeCount=\(changeCount)）",
             module: .clipboard

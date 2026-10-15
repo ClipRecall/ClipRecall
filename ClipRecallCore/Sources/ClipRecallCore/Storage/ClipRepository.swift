@@ -36,7 +36,7 @@ struct FormatRecord: Codable, FetchableRecord, PersistableRecord {
 
 /// 剪贴板条目仓储：数据库持久化（写入 / 查询 / 更新 / 软删除）。
 /// save 时执行与内存存储一致的追加策略（分片合并 + 全局去重）。
-public final class ClipRepository: @unchecked Sendable {
+public final class ClipRepository: ClipStoring, @unchecked Sendable {
     private let databaseManager: DatabaseManager
     private let lock = NSLock()
     private var appendCallback: (@Sendable (Clip) -> Void)?
@@ -46,10 +46,25 @@ public final class ClipRepository: @unchecked Sendable {
     }
 
     /// 新条目保存后的通知（在写入线程执行）。
-    public func setOnAppend(_ callback: @escaping @Sendable (Clip) -> Void) {
-        lock.lock()
-        appendCallback = callback
-        lock.unlock()
+    public var onAppend: (@Sendable (Clip) -> Void)? {
+        get {
+            lock.lock()
+            defer { lock.unlock() }
+            return appendCallback
+        }
+        set {
+            lock.lock()
+            appendCallback = newValue
+            lock.unlock()
+        }
+    }
+
+    public func append(_ clip: Clip) throws {
+        try save(clip)
+    }
+
+    public func recent(limit: Int) throws -> [Clip] {
+        try fetchRecent(limit: limit)
     }
 
     /// 保存条目（含全部格式）；执行分片合并与全局去重（最近 200 条范围内）。

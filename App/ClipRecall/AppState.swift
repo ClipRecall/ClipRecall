@@ -13,7 +13,7 @@ final class AppState {
     var isPaused = false
 
     private let pasteboard = NSPasteboardAdapter()
-    private let store = RecentClipsStore(limit: 50)
+    private let repository = ClipRepository()
     private let blobManager = BlobFileManager()
     let faviconFetcher = FaviconFetcher()
     private let monitor: PasteboardMonitor
@@ -28,21 +28,27 @@ final class AppState {
         )
         pipeline = ClipCapturePipeline(
             pasteboard: pasteboard,
-            store: store,
+            storage: repository,
             blobManager: blobManager
         )
-        store.onAppend = { [weak self] _ in
+        repository.onAppend = { [weak self] _ in
             guard let self else { return }
             Task { @MainActor in
-                self.clips = self.store.clips
-                Log.info("调试列表已刷新：\(self.clips.count) 条", module: .app)
+                self.reloadClips()
             }
         }
         lifecycle.start(handler: pipeline)
         // 登记启动基线：监听开始前剪贴板上已有的内容永不记录
         let baselineFormats = ClipContentCapture.capture(from: pasteboard)
         pipeline.setBaselineFingerprint(FormatFingerprint.contentIdentity(from: baselineFormats))
+        // 从数据库加载历史（重启后历史仍在）
+        reloadClips()
         Log.info("AppState 初始化完成，开始监听剪贴板（基线 \(pasteboard.changeCount)）", module: .app)
+    }
+
+    private func reloadClips() {
+        clips = (try? repository.recent(limit: 50)) ?? []
+        Log.info("调试列表已刷新：\(clips.count) 条", module: .app)
     }
 
     /// 点击调试列表条目：把该条目的格式包写回剪贴板。
