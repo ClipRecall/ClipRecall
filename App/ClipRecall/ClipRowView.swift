@@ -9,24 +9,19 @@ struct ClipRowView: View {
     let appState: AppState
 
     var body: some View {
-        Button {
-            appState.copyBack(clip)
-        } label: {
-            HStack(spacing: 10) {
-                leadingIcon
-                VStack(alignment: .leading, spacing: 3) {
-                    primaryText
-                        .lineLimit(clip.primaryType == .url ? nil : 1)
-                    Text(captionText)
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                }
-                Spacer(minLength: 0)
+        HStack(spacing: 10) {
+            leadingIcon
+            VStack(alignment: .leading, spacing: 3) {
+                primaryText
+                    .lineLimit(clip.primaryType == .url ? nil : 1)
+                Text(captionText)
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
             }
-            .padding(.vertical, 5)
-            .contentShape(Rectangle())
+            Spacer(minLength: 0)
         }
-        .buttonStyle(.plain)
+        .padding(.vertical, 5)
+        .contentShape(Rectangle())
     }
 
     // MARK: - 主文本

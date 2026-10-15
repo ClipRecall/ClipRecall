@@ -145,7 +145,7 @@
 | # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
 | T2.2.1 | [x] | Focus management | keyboard focus without stealing the frontmost app's | TC2.2 |
-| T2.2.2 | [ ] | Enter-to-copy & Esc | select → copy → close flow | TC2.2 |
+| T2.2.2 | [x] | Enter-to-copy & Esc | select → copy → close flow | TC2.2 |
 
 ### T2.3 Recall & paste
 

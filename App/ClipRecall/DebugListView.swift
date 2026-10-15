@@ -7,6 +7,7 @@ struct DebugListView: View {
     /// 关闭面板的回调（Esc / 点击外部由容器处理）
     var onClose: (() -> Void)? = nil
     @State private var showPermissionGuide = false
+    @State private var selectedIndex: Int = 0
     @FocusState private var isListFocused: Bool
 
     var body: some View {
@@ -29,19 +30,49 @@ struct DebugListView: View {
                     }
                     .frame(width: 300, height: 150)
                 } else {
-                    ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 0) {
-                            ForEach(appState.clips) { clip in
-                                ClipRowView(clip: clip, appState: appState)
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            LazyVStack(alignment: .leading, spacing: 0) {
+                                ForEach(Array(appState.clips.enumerated()), id: \.element.id) { index, clip in
+                                    ClipRowView(clip: clip, appState: appState)
+                                        .id(clip.id)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 6)
+                                                .fill(Color.accentColor.opacity(selectedIndex == index ? 0.16 : 0))
+                                        )
+                                        .onHover { hovering in
+                                            if hovering { selectedIndex = index }
+                                        }
+                                        .onTapGesture {
+                                            copyAndClose(clip)
+                                        }
+                                }
                             }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
                         }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
+                        .frame(width: 320, height: 400)
+                        .focusable(true)
+                        .focused($isListFocused)
+                        .focusEffectDisabled()
+                        .onMoveCommand { direction in
+                            guard !appState.clips.isEmpty else { return }
+                            switch direction {
+                            case .up:
+                                selectedIndex = max(0, selectedIndex - 1)
+                            case .down:
+                                selectedIndex = min(appState.clips.count - 1, selectedIndex + 1)
+                            default:
+                                return
+                            }
+                            proxy.scrollTo(appState.clips[selectedIndex].id)
+                        }
+                        .onKeyPress(.return) {
+                            guard appState.clips.indices.contains(selectedIndex) else { return .ignored }
+                            copyAndClose(appState.clips[selectedIndex])
+                            return .handled
+                        }
                     }
-                    .frame(width: 320, height: 400)
-                    .focusable(true)
-                    .focused($isListFocused)
-                    .focusEffectDisabled()
                 }
             }
         }
@@ -75,6 +106,12 @@ struct DebugListView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
+    }
+
+    /// 复制选中条目并自动关闭面板（默认行为：进剪贴板、用户手动 Cmd+V；自动粘贴开关见 T2.6.2 明细 ⑤）。
+    private func copyAndClose(_ clip: Clip) {
+        appState.copyBack(clip)
+        onClose?()
     }
 
     /// 仅未授权时显示的引导卡（授权后自动消失）。

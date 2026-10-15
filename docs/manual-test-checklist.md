@@ -90,7 +90,7 @@
 - [x] Scrolling 5000 entries stays smooth (list virtualization; verified via the "Test data" debug button, auto-cleaned on restart)
 
 ### TC2.2 Keyboard interaction (T2.2)
-- [ ] Full keyboard flow: open → arrow-select → Enter to copy → Esc to close
+- [x] Full keyboard flow: open → arrow-select → Enter to copy → Esc to close (hover highlight + click-copy-close also verified)
 - [ ] Shift+Enter pastes directly into the frontmost app and closes the panel
 - [x] The panel never steals focus from the frontmost app; focus returns correctly after Esc (launcher model A: keyboard goes to the panel while open, Esc restores — per user decision)
 
