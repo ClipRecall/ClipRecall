@@ -195,6 +195,24 @@ public final class ClipRepository: ClipStoring, @unchecked Sendable {
         try cleanupIfNeeded()
     }
 
+    /// 清空全部历史（硬删除，含落盘文件）；返回删除的条数。
+    public func clearAll() throws -> Int {
+        let pool = try databaseManager.open()
+        var deletedPaths: [String] = []
+        let count: Int = try pool.write { db in
+            let rows = try ClipRecord.fetchAll(db)
+            deletedPaths += try Self.collectBlobPaths(clipIds: rows.map(\.id), in: db)
+            for row in rows {
+                try deleteClipRows(id: row.id, in: db)
+            }
+            return rows.count
+        }
+        for path in deletedPaths {
+            try? blobManager.delete(relativePath: path)
+        }
+        return count
+    }
+
     /// 保存后自动执行保留策略（Pin 豁免；落盘文件一并删除，防孤儿文件）。
     private func cleanupIfNeeded() throws {
         lock.lock()

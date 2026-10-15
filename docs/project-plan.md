@@ -159,7 +159,7 @@
 
 | # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
-| T2.4.1 | [ ] | Pin / delete | actions + confirmation UI | TC2.4 |
+| T2.4.1 | [x] | Pin / delete | actions + confirmation UI | TC2.4 |
 | T2.4.2 | [ ] | Edit then copy | editor + overwrite write-back | TC2.4 |
 | T2.4.3 | [ ] | Multi-select merge | multi-select + concatenated copy | TC2.4 |
 

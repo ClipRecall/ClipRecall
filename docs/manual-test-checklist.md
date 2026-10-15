@@ -109,8 +109,9 @@
 - [x] Original-format mode: pasting into a rich-text editor preserves formatting (pairs with TC1.2)
 
 ### TC2.4 Entry management (T2.4)
-- [ ] Pinned entries survive app restarts
-- [ ] Delete asks for confirmation; batch delete works
+- [ ] Pinned entries are exempt from retention cleanup (with persistence, restart survival no longer distinguishes pinned entries; verify after the settings page T2.6.2)
+- [x] Delete asks for confirmation (batch delete not yet implemented)
+- [x] Clear-all button works with confirmation
 - [ ] Editing an entry then copying yields the edited version
 - [ ] Multi-select 3 entries and merge-copy → pastes as one continuous content
 

@@ -120,6 +120,41 @@ final class AppState {
         return thumbnailService.thumbnail(for: data)
     }
 
+    /// 固定 / 取消固定。
+    func togglePin(_ clip: Clip) {
+        var updated = clip
+        updated.pinned.toggle()
+        do {
+            try repository.update(updated)
+            reloadClips()
+            Log.info("已\(updated.pinned ? "固定" : "取消固定")条目", module: .app)
+        } catch {
+            Log.error("固定操作失败：\(error)", module: .app)
+        }
+    }
+
+    /// 删除单条（软删除 tombstone）。
+    func deleteClip(_ clip: Clip) {
+        do {
+            try repository.delete(id: clip.id)
+            reloadClips()
+            Log.info("已删除条目", module: .app)
+        } catch {
+            Log.error("删除失败：\(error)", module: .app)
+        }
+    }
+
+    /// 清空全部历史（硬删除，含落盘文件）。
+    func clearAllHistory() {
+        do {
+            let removed = try repository.clearAll()
+            reloadClips()
+            Log.info("已清空历史：\(removed) 条", module: .app)
+        } catch {
+            Log.error("清空失败：\(error)", module: .app)
+        }
+    }
+
     /// 辅助功能权限是否已开启（直接粘贴功能需要）。
     var hasAccessibilityPermission: Bool {
         AXIsProcessTrusted()

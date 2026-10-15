@@ -4,24 +4,64 @@ import UniformTypeIdentifiers
 import ClipRecallCore
 
 /// 正式条目行视图：按主类型渲染六类条目的行布局（TC2.1 第 2 项）。
+/// 交互：行主体点击 = 复制召回；悬停浮现固定 / 删除操作按钮。
 struct ClipRowView: View {
     let clip: Clip
     let appState: AppState
+    var onCopy: ((Clip) -> Void)? = nil
+    var onTogglePin: ((Clip) -> Void)? = nil
+    var onDelete: ((Clip) -> Void)? = nil
+    @State private var isHovered = false
 
     var body: some View {
         HStack(spacing: 10) {
-            leadingIcon
-            VStack(alignment: .leading, spacing: 3) {
-                primaryText
-                    .lineLimit(clip.primaryType == .url ? nil : 1)
-                Text(captionText)
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
+            Button {
+                onCopy?(clip)
+            } label: {
+                HStack(spacing: 10) {
+                    leadingIcon
+                    VStack(alignment: .leading, spacing: 3) {
+                        primaryText
+                            .lineLimit(clip.primaryType == .url ? nil : 1)
+                        Text(captionText)
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+                .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
             Spacer(minLength: 0)
+            if clip.pinned {
+                Image(systemName: "pin.fill")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+            HStack(spacing: 8) {
+                Button {
+                    onTogglePin?(clip)
+                } label: {
+                    Image(systemName: clip.pinned ? "pin.slash" : "pin")
+                        .font(.caption)
+                }
+                .buttonStyle(.plain)
+                .help(clip.pinned ? "取消固定" : "固定")
+                Button {
+                    onDelete?(clip)
+                } label: {
+                    Image(systemName: "trash")
+                        .font(.caption)
+                }
+                .buttonStyle(.plain)
+                .help("删除")
+            }
+            .opacity(isHovered ? 1 : 0)
         }
         .padding(.vertical, 5)
         .contentShape(Rectangle())
+        .onHover { hovering in
+            isHovered = hovering
+        }
     }
 
     // MARK: - 主文本

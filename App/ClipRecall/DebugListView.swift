@@ -8,6 +8,8 @@ struct DebugListView: View {
     var onClose: (() -> Void)? = nil
     @State private var showPermissionGuide = false
     @State private var selectedIndex: Int = 0
+    @State private var pendingDelete: Clip?
+    @State private var showClearAllAlert = false
     @FocusState private var isListFocused: Bool
 
     var body: some View {
@@ -34,18 +36,21 @@ struct DebugListView: View {
                         ScrollView {
                             LazyVStack(alignment: .leading, spacing: 0) {
                                 ForEach(Array(appState.clips.enumerated()), id: \.element.id) { index, clip in
-                                    ClipRowView(clip: clip, appState: appState)
-                                        .id(clip.id)
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 6)
-                                                .fill(Color.accentColor.opacity(selectedIndex == index ? 0.16 : 0))
-                                        )
-                                        .onHover { hovering in
-                                            if hovering { selectedIndex = index }
-                                        }
-                                        .onTapGesture {
-                                            copyAndClose(clip)
-                                        }
+                                    ClipRowView(
+                                        clip: clip,
+                                        appState: appState,
+                                        onCopy: { copyAndClose($0) },
+                                        onTogglePin: { appState.togglePin($0) },
+                                        onDelete: { pendingDelete = $0 }
+                                    )
+                                    .id(clip.id)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 6)
+                                            .fill(Color.accentColor.opacity(selectedIndex == index ? 0.16 : 0))
+                                    )
+                                    .onHover { hovering in
+                                        if hovering { selectedIndex = index }
+                                    }
                                 }
                             }
                             .padding(.horizontal, 12)
@@ -75,6 +80,7 @@ struct DebugListView: View {
                     }
                 }
             }
+            footer
         }
         .padding(.vertical, 4)
         .onAppear {
@@ -83,6 +89,50 @@ struct DebugListView: View {
         .onExitCommand {
             onClose?()
         }
+        .alert(
+            "删除该条目？",
+            isPresented: Binding(
+                get: { pendingDelete != nil },
+                set: { if !$0 { pendingDelete = nil } }
+            )
+        ) {
+            Button("删除", role: .destructive) {
+                if let clip = pendingDelete {
+                    appState.deleteClip(clip)
+                    pendingDelete = nil
+                }
+            }
+            Button("取消", role: .cancel) {
+                pendingDelete = nil
+            }
+        } message: {
+            Text(pendingDelete.map { "「\($0.textPreview ?? "")」删除后不可恢复。" } ?? "")
+        }
+        .alert("清空全部历史？", isPresented: $showClearAllAlert) {
+            Button("清空", role: .destructive) {
+                appState.clearAllHistory()
+            }
+            Button("取消", role: .cancel) {}
+        } message: {
+            Text("将删除全部 \(appState.clips.count) 条历史，此操作不可撤销。")
+        }
+    }
+
+    /// 底部栏：条目计数 + 清空按钮。
+    private var footer: some View {
+        HStack {
+            Text("\(appState.clips.count) 条")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Spacer()
+            Button("清空") {
+                showClearAllAlert = true
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.red)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
     }
 
     private var header: some View {

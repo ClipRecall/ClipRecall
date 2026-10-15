@@ -205,6 +205,27 @@ final class ClipRepositoryTests: XCTestCase {
         XCTAssertEqual(try repository.fetchRecent(limit: 10).count, 2)
     }
 
+    func testClearAllRemovesEverythingIncludingBlobs() throws {
+        let blobManager = BlobFileManager(
+            directoryURL: tempDirectory.appendingPathComponent("blobs2", isDirectory: true)
+        )
+        let repo = ClipRepository(
+            databaseManager: DatabaseManager(directoryURL: tempDirectory),
+            blobManager: blobManager
+        )
+        try repo.save(makeClip("A"))
+        let path = try blobManager.write(Data(repeating: 7, count: 70 * 1024), fileExtension: "png")
+        try repo.save(Clip(
+            primaryType: .image,
+            formats: [Format(type: FormatUTI.png, payload: .file(path: path))]
+        ))
+
+        let removed = try repo.clearAll()
+        XCTAssertEqual(removed, 2)
+        XCTAssertTrue(try repo.fetchRecent(limit: 10).isEmpty)
+        XCTAssertThrowsError(try blobManager.read(relativePath: path))
+    }
+
     func testCodeLanguageMetadataRoundTrip() throws {
         var format = Format(type: FormatUTI.plainText, payload: .inline(Data("def f():\n    print(1)".utf8)))
         format.metadata.codeLanguage = "Python"
