@@ -85,7 +85,7 @@
 ## Stage 2: UI & Recall
 
 ### TC2.1 Panel & rendering (T2.1)
-- [ ] Clicking the menu bar icon opens the panel
+- [x] Clicking the menu bar icon opens the panel
 - [ ] Text / image / file / URL / code / color entries all render correctly
 - [ ] Scrolling 5000 entries stays smooth (list virtualization; temporarily raise the retention cap to 5000 first)
 
