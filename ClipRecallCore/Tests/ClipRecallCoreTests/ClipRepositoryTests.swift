@@ -173,6 +173,15 @@ final class ClipRepositoryTests: XCTestCase {
         XCTAssertEqual(fetched[0].sourceApp, SourceApp(bundleId: "com.apple.Safari", name: "Safari"))
     }
 
+    func testSensitiveKindMetadataRoundTrip() throws {
+        var format = Format(type: FormatUTI.plainText, payload: .inline(Data("1234567890123456".utf8)))
+        format.metadata.sensitiveKind = .cardNumber
+        let clip = Clip(primaryType: .text, formats: [format], textPreview: "12345678********")
+        try repository.save(clip)
+        let fetched = try repository.fetchRecent(limit: 10)
+        XCTAssertEqual(fetched[0].formats[0].metadata.sensitiveKind, .cardNumber)
+    }
+
     func testCodeLanguageMetadataRoundTrip() throws {
         var format = Format(type: FormatUTI.plainText, payload: .inline(Data("def f():\n    print(1)".utf8)))
         format.metadata.codeLanguage = "Python"

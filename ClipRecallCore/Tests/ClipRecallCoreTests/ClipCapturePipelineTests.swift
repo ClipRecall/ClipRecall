@@ -91,6 +91,27 @@ final class ClipCapturePipelineTests: XCTestCase {
         XCTAssertNil(store.clips[0].sourceApp)
     }
 
+    func testSensitiveContentMaskedPreviewWithIntactFormats() {
+        let pasteboard = FakeTextPasteboard()
+        pasteboard.setString("1234567890123456", forType: FormatUTI.plainText)
+        let store = RecentClipsStore(limit: 10)
+        let pipeline = makePipeline(pasteboard: pasteboard, store: store)
+
+        pipeline.clipboardDidChange(changeCount: 1)
+
+        XCTAssertEqual(store.clips.count, 1)
+        XCTAssertEqual(store.clips[0].textPreview, "12345678********")
+        XCTAssertEqual(
+            store.clips[0].formats[0].metadata.sensitiveKind,
+            .cardNumber
+        )
+        // 原始内容保持完整（召回仍能粘贴原卡号）
+        guard case .inline(let data) = store.clips[0].formats[0].payload else {
+            return XCTFail("应为内联载荷")
+        }
+        XCTAssertEqual(String(data: data, encoding: .utf8), "1234567890123456")
+    }
+
     func testExclusionListOperations() {
         let list = AppExclusionList(defaults: [])
         XCTAssertFalse(list.contains("com.example.a"))

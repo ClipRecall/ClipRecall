@@ -26,17 +26,21 @@ public struct FormatMetadata: Codable, Hashable, Sendable {
     public var codeLanguage: String?
     /// 文件条目的引用档案清单
     public var files: [FileReference]?
+    /// 敏感内容类别（卡号 / 密钥），检测到时标注
+    public var sensitiveKind: SensitiveKind?
 
     public init(
         pixelSize: PixelSize? = nil,
         fileCount: Int? = nil,
         codeLanguage: String? = nil,
-        files: [FileReference]? = nil
+        files: [FileReference]? = nil,
+        sensitiveKind: SensitiveKind? = nil
     ) {
         self.pixelSize = pixelSize
         self.fileCount = fileCount
         self.codeLanguage = codeLanguage
         self.files = files
+        self.sensitiveKind = sensitiveKind
     }
 }
 

@@ -81,7 +81,11 @@ struct DebugListView: View {
 
     @ViewBuilder
     private func leadingIcon(for clip: Clip) -> some View {
-        if clip.primaryType == .color,
+        if clip.formats.first(where: { $0.type == FormatUTI.plainText })?.metadata.sensitiveKind != nil {
+            Image(systemName: "eye.slash")
+                .foregroundStyle(.secondary)
+                .frame(width: 18)
+        } else if clip.primaryType == .color,
            let preview = clip.textPreview,
            let info = ColorDetection.detect(in: preview) {
             Circle()
@@ -120,7 +124,10 @@ struct DebugListView: View {
                 label = "代码"
             }
         case .text:
-            if let preview = clip.textPreview {
+            if let plain = clip.formats.first(where: { $0.type == FormatUTI.plainText }),
+               let kind = plain.metadata.sensitiveKind {
+                label = sensitiveLabel(kind)
+            } else if let preview = clip.textPreview {
                 if EmailDetection.detect(in: preview) != nil {
                     label = "邮箱"
                 } else if DateDetection.detect(in: preview) != nil {
@@ -146,6 +153,13 @@ struct DebugListView: View {
         case .url: return "链接"
         case .code: return "代码"
         case .color: return "颜色"
+        }
+    }
+
+    private func sensitiveLabel(_ kind: SensitiveKind) -> String {
+        switch kind {
+        case .cardNumber: return "银行卡号"
+        case .apiKey: return "APIKey"
         }
     }
 

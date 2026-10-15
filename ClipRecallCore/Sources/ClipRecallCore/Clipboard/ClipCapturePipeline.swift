@@ -8,6 +8,8 @@ public final class ClipCapturePipeline: ClipboardChangeHandling, @unchecked Send
     private let blobManager: BlobFileManager
     private let sourceAppProvider: SourceAppProviding?
     private let exclusionList: AppExclusionList?
+    private let maskingRatio: Double
+    private let maskPosition: MaskPosition
     private let lock = NSLock()
     private var suppressionUntil: Date?
     private var baselineFingerprint: String?
@@ -17,13 +19,17 @@ public final class ClipCapturePipeline: ClipboardChangeHandling, @unchecked Send
         storage: ClipStoring,
         blobManager: BlobFileManager,
         sourceAppProvider: SourceAppProviding? = nil,
-        exclusionList: AppExclusionList? = nil
+        exclusionList: AppExclusionList? = nil,
+        maskingRatio: Double = 0.5,
+        maskPosition: MaskPosition = .trailing
     ) {
         self.pasteboard = pasteboard
         self.storage = storage
         self.blobManager = blobManager
         self.sourceAppProvider = sourceAppProvider
         self.exclusionList = exclusionList
+        self.maskingRatio = maskingRatio
+        self.maskPosition = maskPosition
     }
 
     /// 抑制指定时长内的所有剪贴板变化（用于写回剪贴板后的"回声"抑制）。
@@ -63,6 +69,14 @@ public final class ClipCapturePipeline: ClipboardChangeHandling, @unchecked Send
            let plainIndex = dispatched.firstIndex(where: { $0.type == FormatUTI.plainText }) {
             dispatched[plainIndex].metadata.codeLanguage = language
         }
+        // 敏感内容：把类别写入元数据，预览按比例与位置打码（原始内容不变）
+        if let plainText = ClipTypeInference.plainTextContent(from: dispatched),
+           let plainIndex = dispatched.firstIndex(where: { $0.type == FormatUTI.plainText }),
+           let info = SensitiveContentDetection.detect(
+               in: plainText, maskingRatio: maskingRatio, maskPosition: maskPosition
+           ) {
+            dispatched[plainIndex].metadata.sensitiveKind = info.kind
+        }
         let identity = FormatFingerprint.contentIdentity(from: dispatched)
 
         if let baseline {
@@ -90,11 +104,18 @@ public final class ClipCapturePipeline: ClipboardChangeHandling, @unchecked Send
             sourceApp = nil
         }
 
+        let rawPreview = textPreview(from: dispatched)
+        let finalPreview = rawPreview.flatMap {
+            SensitiveContentDetection.detect(
+                in: $0, maskingRatio: maskingRatio, maskPosition: maskPosition
+            )?.maskedPreview
+        } ?? rawPreview
+
         let clip = Clip(
             sourceApp: sourceApp,
             primaryType: ClipTypeInference.primaryType(from: dispatched),
             formats: dispatched,
-            textPreview: textPreview(from: dispatched)
+            textPreview: finalPreview
         )
         do {
             try storage.append(clip)
