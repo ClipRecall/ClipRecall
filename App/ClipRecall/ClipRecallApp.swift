@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 import ClipRecallCore
 
@@ -12,9 +13,18 @@ struct ClipRecallApp: App {
     }
 
     var body: some Scene {
-        MenuBarExtra("ClipRecall", systemImage: "clipboard") {
+        MenuBarExtra {
             DebugListView(appState: appState)
+        } label: {
+            Image(nsImage: Self.menuBarIcon)
         }
         .menuBarExtraStyle(.window)
+    }
+
+    /// 自定义菜单栏图标（模板图，自动适配深/浅色菜单栏）。
+    private static var menuBarIcon: NSImage {
+        let image = NSImage(named: "menubar-icon") ?? NSImage(systemSymbolName: "clipboard", accessibilityDescription: nil)!
+        image.isTemplate = true
+        return image
     }
 }
