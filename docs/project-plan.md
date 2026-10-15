@@ -1,423 +1,425 @@
-# ClipRecall 项目计划
+# ClipRecall Project Plan
 
-> 配套文档：[技术架构](architecture.md)、[人工测试清单](manual-test-checklist.md)
-> **使用方式（AI 辅助开发）**：每个子任务（如 T1.2.3）是一次独立的 AI 代码产出单元——一次只实现一个子任务，完成即运行对应人工测试（TC 编号）。**TC 编号与任务组编号一一对应：TC X.Y 即 T X.Y 的测试**（详见人工测试清单）。子任务粒度控制在"单个函数 / 单个小组件"级别，避免一次产出过多代码。
-> **完成跟踪**：每个子任务完成后，把该行 ✅ 列的 `[ ]` 改为 `[x]`，与人工测试清单的勾选同步推进。
-> 单人开发、无排期压力；阶段按依赖关系排序。**阶段 5–6 中的服务端任务位于 `closed/`（私有仓库），客户端任务仍属开源仓库（边界见架构第 9 节）；其余阶段全部位于开源仓库。**
+> Companion documents: [Technical Architecture](architecture.md), [Manual Test Checklist](manual-test-checklist.md). Chinese version: [project-plan.zh-CN.md](project-plan.zh-CN.md).
+> **How to use (AI-assisted development)**: each sub-task (e.g. T1.2.3) is one independent AI code-generation unit — implement exactly one sub-task at a time and run the corresponding manual tests (TC numbers) when done. **TC numbers map one-to-one to task groups: TC X.Y is the test for T X.Y** (see the manual test checklist). Sub-tasks are sized at "one function / one small component" to avoid generating too much code at once.
+> **Progress tracking**: flip the ✅ column from `[ ]` to `[x]` when a sub-task is done, keeping pace with the manual test checklist.
+> Solo development, no schedule pressure; stages are ordered by dependencies. **Server-side tasks in stages 5–6 live in `closed/` (private repo); client-side tasks belong to the open-source repository (boundaries in the architecture doc, section 9). Everything else is open source.**
 
-## 1. 项目目标与里程碑（What）
+## 1. Goals & Milestones (What)
 
-**产品一句话**：macOS 剪贴板历史管理工具——多格式记录、极速召回、AI 增强、E2EE 云同步（付费）。
+**Product in one sentence**: a macOS clipboard history manager — multi-format recording, instant recall, AI enhancement, E2EE cloud sync (paid).
 
-**商业模式一句话**：本地功能开源免费，云同步与 AI 内置额度订阅收费（Free / Pro / Pro+）。
+**Business model in one sentence**: local features are open source & free; cloud sync + built-in AI credits are subscription-based (Free / Pro / Pro+).
 
-| 里程碑 | 内容 | 阶段 | 达成标志 |
+| Milestone | Contents | Stages | Exit criteria |
 |---|---|---|---|
-| M1 本地 MVP | 采集 / 召回 / 基础管理可用 | 0–2 | 自用闭环，可开源试水 |
-| M2 AI 能力 | 搜索 + BYOK + 本地模型完整 | 3–4 | AI 能力完整可用，开始内部试用 |
-| M3 变现闭环 | 云同步 + 订阅 + 积分 | 5–6 | 变现功能闭环完成 |
-| M4 发布后 | 打磨、开源、增长 | 7–8 | 官网上线、开源仓库公开 |
+| M1 Local MVP | capture / recall / basic management | 0–2 | self-sufficient daily use, ready to open-source |
+| M2 AI | search + BYOK + local models | 3–4 | AI capabilities complete, internal dogfooding |
+| M3 Monetization | cloud sync + subscriptions + credits | 5–6 | monetization loop complete |
+| M4 Post-release | polish, open source, growth | 7–8 | website live, public repository |
 
-**MVP 边界（坚决不做）**：团队版、Web 版、iOS/iPadOS、Paddle 双渠道、分享链接——全部进入阶段 8 Backlog。
+**MVP boundary (deliberately excluded)**: team spaces, web app, iOS/iPadOS, Paddle billing, share links — all deferred to stage 8 Backlog.
 
-## 2. 阶段 0：工程初始化（M1）
+## 2. Stage 0: Project Bootstrap (M1)
 
-**目标**：跑通工程骨架、数据模型与仓库隔离，为后续所有阶段立桩。
+**Goal**: stand up the project skeleton, data model and repository isolation — the stakes for everything that follows.
 
-### T0.1 Git 与仓库隔离
+### T0.1 Git & repository isolation
 
-| # | ✅ | 任务 | 产出 | 人工测试 |
+| # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
-| T0.1.1 | [x] | 分支策略与 .gitignore | 功能分支开发约定；.gitignore（忽略 closed/、构建产物、.env、密钥文件） | TC0.1 |
-| T0.1.2 | [x] | closed/ 目录与私有仓库 | closed/ 骨架 + 内部 `git init` + 私有远程；边界 README | TC0.1 |
+| T0.1.1 | [x] | Branching strategy & .gitignore | feature-branch convention; .gitignore (closed/, build artifacts, .env, key files) | TC0.1 |
+| T0.1.2 | [x] | closed/ directory & private repo | closed/ skeleton + inner `git init` + private remote; boundary README | TC0.1 |
 
-### T0.2 工程骨架
+### T0.2 Project skeleton
 
-| # | ✅ | 任务 | 产出 | 人工测试 |
+| # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
-| T0.2.1 | [x] | Xcode 工程 + MenuBarExtra 空壳 | App 可启动，菜单栏图标可见 | — |
-| T0.2.2 | [x] | ClipRecallCore SPM 包 | 包结构 + 模块目录（架构 3.1） | — |
-| T0.2.3 | [x] | 构建配置 | 最低 macOS 14、沙盒与 Hardened Runtime 预留、entitlements | — |
+| T0.2.1 | [x] | Xcode project + MenuBarExtra shell | app launches, menu bar icon visible | — |
+| T0.2.2 | [x] | ClipRecallCore SPM package | package structure + module directories (architecture 3.1) | — |
+| T0.2.3 | [x] | Build configuration | macOS 14+, sandbox & Hardened Runtime reserved, entitlements | — |
 
-### T0.3 数据模型
+### T0.3 Data model
 
-| # | ✅ | 任务 | 产出 | 人工测试 |
+| # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
-| T0.3.1 | [x] | 枚举与基础类型 | ClipType / SourceApp / FormatMetadata | — |
-| T0.3.2 | [x] | Clip 与 Format 模型 | 模型定义 + Payload 枚举（架构 4） | — |
-| T0.3.3 | [x] | GRDB 集成 | DatabasePool 单例 + 连接管理 | TC0.3 |
-| T0.3.4 | [x] | migration v1 | clips / formats 表 + 迁移框架 | TC0.3 |
-| T0.3.5 | [x] | 大对象文件管理器 | blobs 目录读写、路径生成 | — |
+| T0.3.1 | [x] | Enums & basic types | ClipType / SourceApp / FormatMetadata | — |
+| T0.3.2 | [x] | Clip & Format models | model definitions + Payload enum (architecture 4) | — |
+| T0.3.3 | [x] | GRDB integration | DatabasePool singleton + connection management | TC0.3 |
+| T0.3.4 | [x] | migration v1 | clips / formats tables + migration framework | TC0.3 |
+| T0.3.5 | [x] | Blob file manager | blobs directory read/write, path generation | — |
 
-### T0.4 日志
+### T0.4 Logging
 
-| # | ✅ | 任务 | 产出 | 人工测试 |
+| # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
-| T0.4.1 | [x] | Logger 封装 | 模块 / 级别结构化日志 | TC0.4 |
+| T0.4.1 | [x] | Logger wrapper | module / level structured logging | TC0.4 |
 
-### T0.5 构建自动化（可选）
+### T0.5 Build automation (optional)
 
-| # | ✅ | 任务 | 产出 | 人工测试 |
+| # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
-| T0.5.1 | [ ] | GitHub Actions 构建 | 开源仓库 CI | — |
+| T0.5.1 | [ ] | GitHub Actions build | CI for the public repository | — |
 
-## 3. 阶段 1：本地引擎（M1 核心）
+## 3. Stage 1: Local Engine (M1 core)
 
-**目标**：完整、可靠的多格式剪贴板历史采集。**本阶段决定产品根基，是全项目人工测试最重的阶段。**
+**Goal**: complete, reliable multi-format clipboard capture. **This stage is the foundation of the product and carries the heaviest manual-testing load. The debug UI (T1.3) is built first — from then on, each completed task group gets its TC tests immediately (build one, test one).**
 
-### T1.1 剪贴板监听
+### T1.1 Clipboard monitoring
 
-| # | ✅ | 任务 | 产出 | 人工测试 |
+| # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
-| T1.1.1 | [ ] | PasteboardMonitor 轮询 | changeCount 轮询循环（0.5s） | TC1.1 |
-| T1.1.2 | [ ] | 生命周期管理 | 启动 / 停止 / 睡眠唤醒恢复 | TC1.1 |
-| T1.1.3 | [ ] | 变更事件接口 | 变更回调协议（供采集器消费） | — |
+| T1.1.1 | [x] | PasteboardMonitor polling | changeCount polling loop (0.5s) | TC1.1 |
+| T1.1.2 | [x] | Lifecycle management | start / stop / wake-from-sleep recovery | TC1.1 |
+| T1.1.3 | [x] | Change event interface | callback protocol for collectors | — |
 
-### T1.2 格式包捕获
+### T1.2 Format capture
 
-| # | ✅ | 任务 | 产出 | 人工测试 |
+| # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
-| T1.2.1 | [ ] | 文本捕获 | 纯文本 + RTF / HTML 多表示读取 | TC1.2 |
-| T1.2.2 | [ ] | 图片捕获 | PNG / TIFF 读取 + 尺寸元数据 | TC1.2 |
-| T1.2.3 | [ ] | 文件捕获 | file-url 解析 + Finder 元数据（名称 / 图标 / 大小） | TC1.2 |
-| T1.2.4 | [ ] | 富文本格式保持 | 网页 / Pages 格式保持路径 | TC1.2 |
-| T1.2.5 | [ ] | Payload 写入策略 | 内联 vs 落盘阈值 | — |
+| T1.2.1 | [x] | Text capture | plain text + RTF / HTML multi-representation reads | TC1.2 |
+| T1.2.2 | [x] | Image capture | PNG / TIFF reads + size metadata | TC1.2 |
+| T1.2.3 | [x] | File capture | file-url parsing + Finder metadata (name / size) | TC1.2 |
+| T1.2.4 | [x] | Rich-text preservation | web / Pages format-preserving path | TC1.2 |
+| T1.2.5 | [x] | Payload write policy | inline vs. disk threshold | — |
 
-### T1.3 类型识别
+### T1.3 Debug UI (visual entry point for manual testing, built first)
 
-| # | ✅ | 任务 | 产出 | 人工测试 |
+| # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
-| T1.3.1 | [ ] | URL 检测 | URL 识别 + 域名提取 | TC1.3 |
-| T1.3.2 | [ ] | favicon 获取 | 异步获取 + 缓存 | TC1.3 |
-| T1.3.3 | [ ] | 代码语言检测 | 启发式检测（Swift / Python / JS 等） | TC1.3 |
-| T1.3.4 | [ ] | 颜色 / 邮箱 / 日期识别 | 派生类型标注 | TC1.3 |
+| T1.3.1 | [x] | Debug list | menu bar dropdown showing recent entries (max 50), click to copy back | TC1.3 |
+| T1.3.2 | [x] | Debug menu items | pause/resume toggle, accessibility-permission entry | TC1.3 |
 
-### T1.4 去重与合并
+### T1.4 Type detection
 
-| # | ✅ | 任务 | 产出 | 人工测试 |
+| # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
-| T1.4.1 | [ ] | 连续相同去重 | 与上一条内容指纹比对 | TC1.4 |
-| T1.4.2 | [ ] | 分片合并 | 时间窗口 + 同来源合并 | TC1.4 |
+| T1.4.1 | [x] | URL detection | URL recognition + domain extraction | TC1.4 |
+| T1.4.2 | [x] | favicon fetching | async fetch + disk cache | TC1.4 |
+| T1.4.3 | [x] | Code language detection | heuristics (Swift / Python / JS) | TC1.4 |
+| T1.4.4 | [x] | Color / email / date detection | derived-type annotation | TC1.4 |
 
-### T1.5 存储与保留
+### T1.5 Dedup & merge
 
-| # | ✅ | 任务 | 产出 | 人工测试 |
+| # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
-| T1.5.1 | [ ] | ClipRepository | 写入 / 查询 / 更新接口 | TC1.5 |
-| T1.5.2 | [ ] | 缩略图生成 | 图片缩略图 + 磁盘缓存 | TC1.2、TC2.1 |
-| T1.5.3 | [ ] | 保留策略执行器 | 条数 / 天数限制 + Pin 豁免 | TC1.5 |
+| T1.5.1 | [x] | Global dedup | fingerprint match against history; duplicates refresh to the top | TC1.5 |
+| T1.5.2 | [x] | Chunk merge | time-window + prefix-continuation merge | TC1.5 |
 
-### T1.6 敏感过滤
+### T1.6 Storage & retention
 
-| # | ✅ | 任务 | 产出 | 人工测试 |
+| # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
-| T1.6.1 | [ ] | 排除 App 名单 | 名单配置 + 拦截 | TC1.6 |
-| T1.6.2 | [ ] | 敏感格式检测 | 卡号 / 密钥正则检测 | TC1.6 |
-| T1.6.3 | [ ] | 手动暂停记录 | 状态开关 + 菜单栏入口 | TC1.6 |
+| T1.6.1 | [x] | ClipRepository | write / query / update APIs | TC1.6 |
+| T1.6.2 | [x] | Thumbnail generation | image thumbnails + disk cache | TC1.2、TC2.1 |
+| T1.6.3 | [x] | Retention executor | count / day limits + pinned exemption | TC1.6 |
 
-### T1.7 权限
+### T1.7 Privacy filtering
 
-| # | ✅ | 任务 | 产出 | 人工测试 |
+| # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
-| T1.7.1 | [ ] | 辅助功能权限 | 检测 + 引导跳转系统设置 | TC1.7 |
+| T1.7.1 | [x] | App exclusion list | list configuration + interception | TC1.7 |
+| T1.7.2 | [x] | Sensitive-content detection | card / key regex detection with masking | TC1.7 |
+| T1.7.3 | [x] | Manual pause | state toggle + menu bar entry | TC1.7 |
 
-### T1.8 调试界面（阶段 1 测试的可视化入口）
+### T1.8 Permissions
 
-| # | ✅ | 任务 | 产出 | 人工测试 |
+| # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
-| T1.8.1 | [ ] | 调试列表 | 菜单栏下拉显示最近条目（上限 50 条），点击复制回剪贴板 | TC1.8 |
-| T1.8.2 | [ ] | 调试菜单项 | 暂停记录开关、检查辅助功能权限入口 | TC1.8 |
+| T1.8.1 | [x] | Accessibility permission | detection + guided jump to System Settings | TC1.8 |
 
-## 4. 阶段 2：UI 与召回（M1 核心）
+## 4. Stage 2: UI & Recall (M1 core)
 
-**目标**：高频路径做到"极速 + 纯键盘操作"，这是产品的体验核心。
+**Goal**: make the high-frequency path "instant + keyboard-first" — the experience core of the product.
 
-### T2.1 面板骨架
+### T2.1 Panel skeleton
 
-| # | ✅ | 任务 | 产出 | 人工测试 |
+| # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
-| T2.1.1 | [ ] | MenuBarExtra 入口 | 图标 + 点击唤起 | TC2.1 |
-| T2.1.2 | [ ] | 列表渲染 | List 虚拟化 + 滚动性能 | TC2.1 |
-| T2.1.3 | [ ] | 条目行视图 ×6 | 文本 / 图片 / 文件 / URL / 代码 / 颜色行视图 | TC2.1 |
+| T2.1.1 | [ ] | MenuBarExtra entry | icon + click to open | TC2.1 |
+| T2.1.2 | [ ] | List rendering | List virtualization + scroll performance | TC2.1 |
+| T2.1.3 | [ ] | Entry row views ×6 | text / image / file / URL / code / color rows | TC2.1 |
 
-### T2.2 键盘交互
+### T2.2 Keyboard interaction
 
-| # | ✅ | 任务 | 产出 | 人工测试 |
+| # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
-| T2.2.1 | [ ] | 焦点管理 | 键盘焦点 + 不抢前台 App 焦点 | TC2.2 |
-| T2.2.2 | [ ] | 回车复制与 Esc | 选择 → 复制 → 关闭链路 | TC2.2 |
+| T2.2.1 | [ ] | Focus management | keyboard focus without stealing the frontmost app's | TC2.2 |
+| T2.2.2 | [ ] | Enter-to-copy & Esc | select → copy → close flow | TC2.2 |
 
-### T2.3 召回粘贴
+### T2.3 Recall & paste
 
-| # | ✅ | 任务 | 产出 | 人工测试 |
+| # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
-| T2.3.1 | [ ] | 剪贴板写入 | 多格式写入 NSPasteboard | TC2.3 |
-| T2.3.2 | [ ] | 直接粘贴 | AX 定位 + CGEvent 模拟 Cmd+V | TC2.3 |
-| T2.3.3 | [ ] | 纯文本粘贴模式 | 格式剥离写入 | TC2.3 |
+| T2.3.1 | [ ] | Pasteboard write-back | multi-format NSPasteboard write | TC2.3 |
+| T2.3.2 | [ ] | Direct paste | AX frontmost-app + CGEvent Cmd+V | TC2.3 |
+| T2.3.3 | [ ] | Plain-text paste mode | format-stripping write | TC2.3 |
 
-### T2.4 条目管理
+### T2.4 Entry management
 
-| # | ✅ | 任务 | 产出 | 人工测试 |
+| # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
-| T2.4.1 | [ ] | Pin / 删除 | 操作 + 确认交互 | TC2.4 |
-| T2.4.2 | [ ] | 编辑后复制 | 编辑器 + 覆盖写入 | TC2.4 |
-| T2.4.3 | [ ] | 多选合并复制 | 多选 + 拼接复制 | TC2.4 |
+| T2.4.1 | [ ] | Pin / delete | actions + confirmation UI | TC2.4 |
+| T2.4.2 | [ ] | Edit then copy | editor + overwrite write-back | TC2.4 |
+| T2.4.3 | [ ] | Multi-select merge | multi-select + concatenated copy | TC2.4 |
 
-### T2.5 全局快捷键
+### T2.5 Global hotkey
 
-| # | ✅ | 任务 | 产出 | 人工测试 |
+| # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
-| T2.5.1 | [ ] | 快捷键注册 | Carbon hotkey 封装 | TC2.5 |
-| T2.5.2 | [ ] | 配置与冲突检测 | 设置页改键 + 冲突提示 | TC2.5 |
+| T2.5.1 | [ ] | Hotkey registration | Carbon hotkey wrapper | TC2.5 |
+| T2.5.2 | [ ] | Configuration & conflict detection | settings-page rebinding + conflict hints | TC2.5 |
 
-### T2.6 设置页
+### T2.6 Settings page
 
-| # | ✅ | 任务 | 产出 | 人工测试 |
+| # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
-| T2.6.1 | [ ] | 设置存储 | settings 表 + 读写 | — |
-| T2.6.2 | [ ] | 设置 UI | 保留策略 / 排除名单 / 快捷键分组 | TC2.6 |
-| T2.6.3 | [ ] | 开机自启 | SMAppService 注册 | TC2.6 |
+| T2.6.1 | [ ] | Settings storage | settings table + read/write | — |
+| T2.6.2 | [ ] | Settings UI | retention / exclusion list / hotkey groups | TC2.6 |
+| T2.6.3 | [ ] | Launch at login | SMAppService registration | TC2.6 |
 
-## 5. 阶段 3：搜索（M2）
+> **T2.6.2 settings detail (do not forget)**: ① retention policy (count / days; reads & writes T1.6.3's RetentionPolicy); ② app exclusion list (reads & writes T1.7.1's AppExclusionList — the default password-manager list is editable here); ③ global hotkey; ④ sensitive-content masking (on/off + maskingRatio + front/middle/back maskPosition; reads & writes T1.7.2); ⑤ **direct-paste toggle (requested by the user on 2026-10-15): ON = clicking an entry pastes directly into the frontmost app; OFF = content goes to the clipboard and the user presses Cmd+V themselves (branches into T2.3.2 / T2.3.1)**; ⑥ when this page is done, remind the user to back-test the three TC1.6 items (limit 100 entries / keep 7 days / pinned exemption).
 
-**目标**：历史越多越依赖搜索。三层搜索：全文 → OCR → 语义，逐层落地。
+## 5. Stage 3: Search (M2)
 
-### T3.1 全文搜索
+**Goal**: the more history you have, the more you rely on search. Three layers, one at a time: full-text → OCR → semantic.
 
-| # | ✅ | 任务 | 产出 | 人工测试 |
+### T3.1 Full-text search
+
+| # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
-| T3.1.1 | [ ] | FTS5 表与写入 | 虚拟表 + 同步写入 | TC3.1 |
-| T3.1.2 | [ ] | 查询接口 | 短语匹配 + LIKE 兜底（中文） | TC3.1 |
-| T3.1.3 | [ ] | 索引重建 | 全量重建命令 | TC3.1 |
+| T3.1.1 | [ ] | FTS5 table & writes | virtual table + synchronized writes | TC3.1 |
+| T3.1.2 | [ ] | Query API | phrase matching + LIKE fallback (Chinese) | TC3.1 |
+| T3.1.3 | [ ] | Index rebuild | full rebuild command | TC3.1 |
 
-### T3.2 过滤
+### T3.2 Filtering
 
-| # | ✅ | 任务 | 产出 | 人工测试 |
+| # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
-| T3.2.1 | [ ] | 过滤器模型 | 类型 / 来源 / 时间组合查询 | TC3.2 |
-| T3.2.2 | [ ] | 搜索与过滤 UI | 搜索框 + 过滤栏 | TC3.2 |
+| T3.2.1 | [ ] | Filter model | type / source / time combined queries | TC3.2 |
+| T3.2.2 | [ ] | Search & filter UI | search box + filter bar | TC3.2 |
 
-### T3.3 图片 OCR
+### T3.3 Image OCR
 
-| # | ✅ | 任务 | 产出 | 人工测试 |
+| # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
-| T3.3.1 | [ ] | Vision 封装 | 中英文识别请求 | TC3.3 |
-| T3.3.2 | [ ] | 增量索引队列 | 后台队列 + 断点续传 | TC3.3 |
-| T3.3.3 | [ ] | OCR 文本入索引 | 结果写入 FTS5 | TC3.3 |
+| T3.3.1 | [ ] | Vision wrapper | Chinese + English recognition requests | TC3.3 |
+| T3.3.2 | [ ] | Incremental index queue | background queue + resume | TC3.3 |
+| T3.3.3 | [ ] | OCR text into index | results written into FTS5 | TC3.3 |
 
-### T3.4 本地语义搜索
+### T3.4 Local semantic search
 
-| # | ✅ | 任务 | 产出 | 人工测试 |
+| # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
-| T3.4.1 | [ ] | NLEmbedding 向量化 | 文本 → 向量 | — |
-| T3.4.2 | [ ] | 向量库与检索 | 本地向量存储 + 余弦检索 | TC3.4 |
+| T3.4.1 | [ ] | NLEmbedding vectorization | text → vectors | — |
+| T3.4.2 | [ ] | Vector store & search | local vector storage + cosine search | TC3.4 |
 
-## 6. 阶段 4：AI 功能（M2）
+## 6. Stage 4: AI (M2)
 
-**依赖说明**：T4.1 仅依赖阶段 1（数据）；T4.2 动作 UI 依赖阶段 2（面板）。**本阶段不依赖后端，可与阶段 3 并行。**
+**Dependencies**: T4.1 needs only stage 1 (data); the action UI (T4.2) needs stage 2 (panel). **No backend dependency — can run in parallel with stage 3.**
 
-### T4.1 Provider 抽象
+### T4.1 Provider abstraction
 
-| # | ✅ | 任务 | 产出 | 人工测试 |
+| # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
-| T4.1.1 | [ ] | 请求模型 | ChatMessage / ChatRequest + OpenAI 兼容编码 | — |
-| T4.1.2 | [ ] | SSE 流式解析 | 流式响应解析 | TC4.2 |
-| T4.1.3 | [ ] | Provider 预设 | OpenAI / DeepSeek / Moonshot / Ollama / vLLM / 自定义 | TC4.1 |
-| T4.1.4 | [ ] | Keychain 存取 | API Key 安全存储 | TC4.1 |
+| T4.1.1 | [ ] | Request models | ChatMessage / ChatRequest + OpenAI-compatible encoding | — |
+| T4.1.2 | [ ] | SSE streaming parser | streaming response parsing | TC4.2 |
+| T4.1.3 | [ ] | Provider presets | OpenAI / DeepSeek / Moonshot / Ollama / vLLM / Custom | TC4.1 |
+| T4.1.4 | [ ] | Keychain storage | API key secure storage | TC4.1 |
 
-### T4.2 AI 动作
+### T4.2 AI actions
 
-| # | ✅ | 任务 | 产出 | 人工测试 |
+| # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
-| T4.2.1 | [ ] | 动作与 Prompt 模板 | 总结 / 翻译 / 润色 / 改写语气 / 解释代码 | TC4.2 |
-| T4.2.2 | [ ] | 执行引擎 | 输入截断 / 超时 / 重试 | TC4.2 |
-| T4.2.3 | [ ] | 动作 UI | 面板内触发 + 流式展示 | TC4.2 |
+| T4.2.1 | [ ] | Actions & prompt templates | summarize / translate / polish / rewrite tone / explain code | TC4.2 |
+| T4.2.2 | [ ] | Execution engine | input truncation / timeout / retry | TC4.2 |
+| T4.2.3 | [ ] | Action UI | in-panel trigger + streaming display | TC4.2 |
 
-### T4.3 本地模型集成
+### T4.3 Local model integration
 
-| # | ✅ | 任务 | 产出 | 人工测试 |
+| # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
-| T4.3.1 | [ ] | Ollama 检测 | ping + 状态显示 | TC4.3 |
-| T4.3.2 | [ ] | 模型列表拉取 | /api/tags 下拉框 | TC4.3 |
-| T4.3.3 | [ ] | vLLM 预设 | 自定义端点配置 | TC4.3 |
-| T4.3.4 | [ ] | 安装引导 | 未安装时引导入口（跳转 Ollama 官方安装页） | TC4.3 |
+| T4.3.1 | [ ] | Ollama detection | ping + status display | TC4.3 |
+| T4.3.2 | [ ] | Model list | /api/tags dropdown | TC4.3 |
+| T4.3.3 | [ ] | vLLM preset | custom endpoint configuration | TC4.3 |
+| T4.3.4 | [ ] | Install guide | guide entry when not installed (link to Ollama's official page) | TC4.3 |
 
-### T4.4 结果管理
+### T4.4 Result management
 
-| # | ✅ | 任务 | 产出 | 人工测试 |
+| # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
-| T4.4.1 | [ ] | 派生 Format 保存 | AI 结果落库 | TC4.4 |
-| T4.4.2 | [ ] | 动作历史 | 历史记录与回溯 | TC4.4 |
+| T4.4.1 | [ ] | Derived Format storage | AI results persisted | TC4.4 |
+| T4.4.2 | [ ] | Action history | history & traceability | TC4.4 |
 
-### T4.5 隐私交互
+### T4.5 Privacy interaction
 
-| # | ✅ | 任务 | 产出 | 人工测试 |
+| # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
-| T4.5.1 | [ ] | 发送前确认 | 确认弹窗 | TC4.5 |
-| T4.5.2 | [ ] | 数据去向说明 | BYOK / 内置额度差异文案 | TC4.5 |
-| T4.5.3 | [ ] | 默认关闭开关 | AI 功能默认关闭，设置页手动开启 | TC4.5 |
+| T4.5.1 | [ ] | Pre-send confirmation | confirmation dialog | TC4.5 |
+| T4.5.2 | [ ] | Data-destination notice | BYOK / built-in-credits copy | TC4.5 |
+| T4.5.3 | [ ] | Default-off switch | AI off by default, enabled manually in settings | TC4.5 |
 
-## 7. 阶段 5：后端 + E2EE 云同步（M3）
+## 7. Stage 5: Backend & E2EE Sync (M3)
 
-**说明**：本阶段**服务端产物在 `closed/` 内开发**（私有仓库）；**客户端产物（E2EE 密钥体系、条目加密、同步引擎）属于开源仓库**——E2EE 客户端开源是信任的根基（架构第 9 节）。表中"位置"列标注每个任务归属。安全优先于功能，宁可慢。
+**Note**: **server-side deliverables are developed inside `closed/` (private repo)**; **client-side deliverables (E2EE key system, per-entry encryption, sync engine) belong to the open-source repository** — an open E2EE client is the foundation of trust (architecture section 9). The "Location" column marks each task's home. Security over features — take it slow.
 
-### T5.1 服务端骨架
+### T5.1 Server skeleton
 
-| # | ✅ | 任务 | 产出 | 位置 | 人工测试 |
+| # | ✅ | Task | Deliverable | Location | Manual test |
 |---|---|---|---|---|---|
-| T5.1.1 | [ ] | Vapor 项目 + Docker Compose | Caddy / PG(pgvector) / MinIO 编排 | closed | TC5.1 |
-| T5.1.2 | [ ] | 配置管理 | 环境变量 / 密钥模板（.env 不入库） | closed | — |
-| T5.1.3 | [ ] | 备份与恢复 | 备份脚本 + 恢复演练 | closed | TC5.1 |
+| T5.1.1 | [ ] | Vapor project + Docker Compose | Caddy / PG (pgvector) / MinIO orchestration | closed | TC5.1 |
+| T5.1.2 | [ ] | Configuration management | env vars / secret templates (.env never committed) | closed | — |
+| T5.1.3 | [ ] | Backup & restore | backup scripts + restore drill | closed | TC5.1 |
 
-### T5.2 账号体系
+### T5.2 Accounts
 
-| # | ✅ | 任务 | 产出 | 位置 | 人工测试 |
+| # | ✅ | Task | Deliverable | Location | Manual test |
 |---|---|---|---|---|---|
-| T5.2.1 | [ ] | 用户与注册 / 登录 | users 表 + 端点 | closed | TC5.2 |
-| T5.2.2 | [ ] | Argon2id 认证哈希 | 服务端哈希（与加密 KEK 隔离） | closed | TC5.2 |
-| T5.2.3 | [ ] | 会话令牌 | 签发 / 校验 / 刷新 | closed | TC5.2 |
+| T5.2.1 | [ ] | Users & register / login | users table + endpoints | closed | TC5.2 |
+| T5.2.2 | [ ] | Argon2id auth hash | server-side hash (isolated from the encryption KEK) | closed | TC5.2 |
+| T5.2.3 | [ ] | Session tokens | issue / verify / refresh | closed | TC5.2 |
 
-### T5.3 E2EE 密钥体系
+### T5.3 E2EE key system
 
-| # | ✅ | 任务 | 产出 | 位置 | 人工测试 |
+| # | ✅ | Task | Deliverable | Location | Manual test |
 |---|---|---|---|---|---|
-| T5.3.1 | [ ] | Argon2id 客户端封装 | KDF（libsodium） | 开源 Core | — |
-| T5.3.2 | [ ] | MK 生成与双包裹 | MK / KEK_pw / KEK_rk + wrapped 上传端点 | 开源 Core + closed | TC5.3 |
-| T5.3.3 | [ ] | 改密码流程 | 重包裹 MK，零数据移动 | 开源 Core + closed | TC5.3 |
-| T5.3.4 | [ ] | 忘密码两路径 | 恢复密钥路径 / 清云重传路径 | 开源 Core + closed | TC5.3 |
-| T5.3.5 | [ ] | 恢复密钥管理 | 生成 / 重生成（旧密钥作废） | 开源 Core | TC5.3 |
-| T5.3.6 | [ ] | MK epoch | 版本号 + 多设备自愈 | 开源 Core + closed | TC5.6 |
+| T5.3.1 | [ ] | Argon2id client wrapper | KDF (libsodium) | open Core | — |
+| T5.3.2 | [ ] | MK generation & double wrapping | MK / KEK_pw / KEK_rk + wrapped upload endpoint | open Core + closed | TC5.3 |
+| T5.3.3 | [ ] | Change-password flow | re-wrap MK, zero data movement | open Core + closed | TC5.3 |
+| T5.3.4 | [ ] | Forgot-password paths | recovery-key path / clear-cloud path | open Core + closed | TC5.3 |
+| T5.3.5 | [ ] | Recovery-key management | generate / regenerate (old key invalidated) | open Core | TC5.3 |
+| T5.3.6 | [ ] | MK epoch | version number + multi-device self-healing | open Core + closed | TC5.6 |
 
-### T5.4 条目加密
+### T5.4 Per-entry encryption
 
-| # | ✅ | 任务 | 产出 | 位置 | 人工测试 |
+| # | ✅ | Task | Deliverable | Location | Manual test |
 |---|---|---|---|---|---|
-| T5.4.1 | [ ] | DEK 生成与包裹 | 每条目随机 DEK | 开源 Core | — |
-| T5.4.2 | [ ] | 信封编解码 | AES-256-GCM + 压缩 + 信封格式 | 开源 Core | TC5.4 |
-| T5.4.3 | [ ] | 批量加解密 | 批量处理接口 | 开源 Core | TC5.4 |
+| T5.4.1 | [ ] | DEK generation & wrapping | random DEK per entry | open Core | — |
+| T5.4.2 | [ ] | Envelope codec | AES-256-GCM + compression + envelope format | open Core | TC5.4 |
+| T5.4.3 | [ ] | Batch encrypt / decrypt | batch processing APIs | open Core | TC5.4 |
 
-### T5.5 同步协议
+### T5.5 Sync protocol
 
-| # | ✅ | 任务 | 产出 | 位置 | 人工测试 |
+| # | ✅ | Task | Deliverable | Location | Manual test |
 |---|---|---|---|---|---|
-| T5.5.1 | [ ] | 服务端信封存储 | envelopes 表 + MinIO blob + 变更端点 | closed | TC5.5 |
-| T5.5.2 | [ ] | 客户端上传引擎 | 增量上传 + 断点续传 | 开源 Core | TC5.5 |
-| T5.5.3 | [ ] | 客户端拉取与合并 | 增量拉取 + LWW | 开源 Core | TC5.5 |
-| T5.5.4 | [ ] | tombstone 处理 | 删除同步 | 开源 Core | TC5.5 |
-| T5.5.5 | [ ] | sync_state 跟踪 | 本地同步状态位 | 开源 Core | TC5.5 |
+| T5.5.1 | [ ] | Server envelope storage | envelopes table + MinIO blobs + change endpoints | closed | TC5.5 |
+| T5.5.2 | [ ] | Client upload engine | incremental upload + resumable | open Core | TC5.5 |
+| T5.5.3 | [ ] | Client pull & merge | incremental pull + LWW | open Core | TC5.5 |
+| T5.5.4 | [ ] | Tombstone handling | delete propagation | open Core | TC5.5 |
+| T5.5.5 | [ ] | sync_state tracking | local sync status flags | open Core | TC5.5 |
 
-### T5.6 多设备
+### T5.6 Multi-device
 
-| # | ✅ | 任务 | 产出 | 位置 | 人工测试 |
+| # | ✅ | Task | Deliverable | Location | Manual test |
 |---|---|---|---|---|---|
-| T5.6.1 | [ ] | 账号 UI | 登录 / 注册 / 账号设置（改密码、恢复密钥）UI + 密码解 MK 流程 | 开源 Core + 开源 App | TC5.2、TC5.3 |
-| T5.6.2 | [ ] | epoch 自愈 | 版本检测 + 自动重传 | 开源 Core | TC5.6 |
+| T5.6.1 | [ ] | Account UI | login / register / account settings (change password, recovery key) + MK unwrap flow | open Core + open App | TC5.2、TC5.3 |
+| T5.6.2 | [ ] | Epoch self-healing | version detection + automatic re-upload | open Core | TC5.6 |
 
-## 8. 阶段 6：订阅 + AI 积分（M3）
+## 8. Stage 6: Subscriptions & AI Credits (M3)
 
-**说明**：**服务端产物（权益校验、网关、账本）在 `closed/` 内开发；客户端产物（StoreKit、权益状态、额度 UI）属于开源仓库。** IAP 沙盒测试是全项目最繁琐的人工测试区，预留充足时间。
+**Note**: **server-side deliverables (entitlement verification, gateway, ledger) are developed in `closed/`; client-side deliverables (StoreKit, entitlement state, credit UI) belong to the open-source repository.** IAP sandbox testing is the most tedious manual-testing area of the whole project — budget time generously.
 
 ### T6.1 StoreKit 2
 
-| # | ✅ | 任务 | 产出 | 位置 | 人工测试 |
+| # | ✅ | Task | Deliverable | Location | Manual test |
 |---|---|---|---|---|---|
-| T6.1.1 | [ ] | 产品定义 | Pro 月付 / 年付、Pro+ 月付 / 年付、加油包 | 开源 App | TC6.1 |
-| T6.1.2 | [ ] | 购买流程 | 商品展示 + 购买 UI | 开源 App | TC6.1 |
-| T6.1.3 | [ ] | 交易与恢复 | 交易监听 + 恢复购买 | 开源 App | TC6.1 |
+| T6.1.1 | [ ] | Product definitions | Pro monthly / yearly, Pro+ monthly / yearly, top-up packs | open App | TC6.1 |
+| T6.1.2 | [ ] | Purchase flow | product display + purchase UI | open App | TC6.1 |
+| T6.1.3 | [ ] | Transactions & restore | transaction listener + restore purchases | open App | TC6.1 |
 
-### T6.2 权益同步
+### T6.2 Entitlement sync
 
-| # | ✅ | 任务 | 产出 | 位置 | 人工测试 |
+| # | ✅ | Task | Deliverable | Location | Manual test |
 |---|---|---|---|---|---|
-| T6.2.1 | [ ] | App Store Server API 校验 | 收据 / 交易验证 | closed | TC6.2 |
-| T6.2.2 | [ ] | Server Notifications V2 | 续费 / 退款 / 宽限处理 | closed | TC6.2 |
-| T6.2.3 | [ ] | 客户端权益状态机 | Free / Pro / Pro+ 切换 | 开源 Core | TC6.2 |
+| T6.2.1 | [ ] | App Store Server API verification | receipt / transaction validation | closed | TC6.2 |
+| T6.2.2 | [ ] | Server Notifications V2 | renew / refund / grace handling | closed | TC6.2 |
+| T6.2.3 | [ ] | Client entitlement state machine | Free / Pro / Pro+ transitions | open Core | TC6.2 |
 
-### T6.3 AI 网关
+### T6.3 AI gateway
 
-| # | ✅ | 任务 | 产出 | 位置 | 人工测试 |
+| # | ✅ | Task | Deliverable | Location | Manual test |
 |---|---|---|---|---|---|
-| T6.3.1 | [ ] | 网关鉴权 | 订阅令牌校验中间件 | closed | TC6.3 |
-| T6.3.2 | [ ] | 模型路由 | 小 / 大模型路由配置 | closed | TC6.3 |
-| T6.3.3 | [ ] | 流式中继 | 转发 + 不落盘 | closed | TC6.3 |
+| T6.3.1 | [ ] | Gateway auth | subscription-token middleware | closed | TC6.3 |
+| T6.3.2 | [ ] | Model routing | small / large model routing config | closed | TC6.3 |
+| T6.3.3 | [ ] | Streaming relay | relay + never persisted | closed | TC6.3 |
 
-### T6.4 积分账本
+### T6.4 Credit ledger
 
-| # | ✅ | 任务 | 产出 | 位置 | 人工测试 |
+| # | ✅ | Task | Deliverable | Location | Manual test |
 |---|---|---|---|---|---|
-| T6.4.1 | [ ] | 账本与扣减 | 事务扣减 + 幂等 | closed | TC6.4 |
-| T6.4.2 | [ ] | 月度结转 | 结转（上限 1 个月额度） | closed | TC6.4 |
-| T6.4.3 | [ ] | 额度 UI | 剩余积分展示 + 硬停提示 | 开源 App | TC6.4 |
+| T6.4.1 | [ ] | Ledger & debits | transactional debits + idempotency | closed | TC6.4 |
+| T6.4.2 | [ ] | Monthly rollover | rollover capped at one month's allowance | closed | TC6.4 |
+| T6.4.3 | [ ] | Credit UI | remaining-credits display + hard-stop hints | open App | TC6.4 |
 
-### T6.5 通道切换
+### T6.5 Channel switching
 
-| # | ✅ | 任务 | 产出 | 位置 | 人工测试 |
+| # | ✅ | Task | Deliverable | Location | Manual test |
 |---|---|---|---|---|---|
-| T6.5.1 | [ ] | BYOK ↔ 内置额度切换 | 切换逻辑 + 内置额度通道客户端接入（经服务端网关） | 开源 Core + 开源 App | TC6.5 |
+| T6.5.1 | [ ] | BYOK ↔ built-in-credits switch | instant switching + built-in channel client (via gateway) | open Core + open App | TC6.5 |
 
-## 9. 阶段 7：打磨与发布（M4）
+## 9. Stage 7: Polish & Release (M4)
 
-**目标**：从"能用"到"可信、可卖"。
+**Goal**: from "works" to "trusted and sellable".
 
-### T7.1 合规材料
+### T7.1 Compliance materials
 
-| # | ✅ | 任务 | 产出 | 人工测试 |
+| # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
-| T7.1.1 | [ ] | 隐私政策 | E2EE 承诺与 AI 例外明示 | TC7.1 |
-| T7.1.2 | [ ] | 用户协议 + 官网 | 协议 + 落地页 | TC7.1 |
+| T7.1.1 | [ ] | Privacy policy | E2EE promises + AI exceptions disclosed | TC7.1 |
+| T7.1.2 | [ ] | Terms + website | agreement + landing page | TC7.1 |
 
 ### T7.2 Beta
 
-| # | ✅ | 任务 | 产出 | 人工测试 |
+| # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
-| T7.2.1 | [ ] | TestFlight 配置 | 邀请 / 安装 / 更新 | TC7.2 |
-| T7.2.2 | [ ] | 反馈收集 | 渠道 + 归入任务管理 | TC7.2 |
+| T7.2.1 | [ ] | TestFlight setup | invite / install / update | TC7.2 |
+| T7.2.2 | [ ] | Feedback collection | channel + task tracking | TC7.2 |
 
-### T7.3 性能打磨
+### T7.3 Performance polish
 
-| # | ✅ | 任务 | 产出 | 人工测试 |
+| # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
-| T7.3.1 | [ ] | 启动性能 | 冷启动 < 2s | TC7.3 |
-| T7.3.2 | [ ] | 面板响应 | 唤起 < 100ms | TC7.3 |
-| T7.3.3 | [ ] | 内存与泄漏 | 整日运行稳定 | TC7.3 |
+| T7.3.1 | [ ] | Launch performance | cold start < 2s | TC7.3 |
+| T7.3.2 | [ ] | Panel responsiveness | open < 100ms | TC7.3 |
+| T7.3.3 | [ ] | Memory & leaks | stable all-day runs | TC7.3 |
 
-### T7.4 上架
+### T7.4 App Store submission
 
-| # | ✅ | 任务 | 产出 | 人工测试 |
+| # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
-| T7.4.1 | [ ] | 公证与 Hardened Runtime | 签名 / 公证配置 | TC7.4 |
-| T7.4.2 | [ ] | 沙盒适配 | 沙盒全功能验证 | TC7.4 |
-| T7.4.3 | [ ] | MAS 提交 | 提交 + 审核应对 | TC7.4 |
+| T7.4.1 | [ ] | Notarization & Hardened Runtime | signing / notarization config | TC7.4 |
+| T7.4.2 | [ ] | Sandbox adaptation | full-feature sandbox validation | TC7.4 |
+| T7.4.3 | [ ] | MAS submission | submission + review handling | TC7.4 |
 
-### T7.5 开源发布
+### T7.5 Open-source release
 
-| # | ✅ | 任务 | 产出 | 人工测试 |
+| # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
-| T7.5.1 | [ ] | 仓库公开 | 外层仓库直接公开（无需代码搬迁） | — |
-| T7.5.2 | [ ] | README / Contributing / MIT | 开源三件套 | TC7.5 |
-| T7.5.3 | [ ] | 干净构建与扫描 | 无 closed/ 引用、无凭据泄露 | TC7.5 |
+| T7.5.1 | [ ] | Repository public | the outer repository goes public as-is (no code relocation) | — |
+| T7.5.2 | [ ] | README / Contributing / MIT | the open-source trio | TC7.5 |
+| T7.5.3 | [ ] | Clean build & scan | no closed/ references, no credentials | TC7.5 |
 
-## 10. 阶段 8：Backlog（不排期）
+## 10. Stage 8: Backlog (unscheduled)
 
-Web 版（浏览器内解密）｜iOS / iPadOS｜Paddle 双渠道｜分享链接（DEK 重包裹）｜团队版｜服务端开源与自部署｜多语言本地化
+Web app (in-browser decryption) | iOS / iPadOS | Paddle billing | Share links (DEK re-wrapping) | Team spaces | Open-sourcing & self-hosting the server | i18n | Panel popup positioning (follow cursor / screen corner) | UI polish & animations (formal panel visual pass)
 
-## 11. 依赖关系
+## 11. Dependencies
 
 ```
-阶段 0 → 1 → 2 → 3              （M1–M2 主线，串行）
+Stage 0 → 1 → 2 → 3              (M1–M2 main line, sequential)
               ↘
-                阶段 4           （T4.1 依赖阶段 1；动作 UI 依赖阶段 2；可与 3 并行）
-阶段 5 → 6                      （服务端在 closed/，客户端在开源仓库；依赖阶段 1 数据模型）
-阶段 7                          （依赖 M3 完成）
+                Stage 4           (T4.1 needs stage 1; action UI needs stage 2; parallel with 3)
+Stage 5 → 6                      (server in closed/, client open-source; needs stage 1's data model)
+Stage 7                          (needs M3 complete)
 ```
 
-## 12. 风险与对策
+## 12. Risks & Countermeasures
 
-| 风险 | 影响 | 对策 |
+| Risk | Impact | Countermeasure |
 |---|---|---|
-| FTS5 中文分词效果不佳 | 搜索体验打折 | T3.1.2 实测验证，必要时切换 trigram tokenizer + LIKE 兜底 |
-| OCR 后台索引资源占用 | 用户感知卡顿 | 前台降速 + 增量断点索引（TC3.3 验证） |
-| IAP 审核被拒（剪贴板敏感） | 上架延期 | T1.6 敏感过滤 + T7.1.1 隐私政策先行，按审核清单自检（TC7.4） |
-| 忘密码 UX 引发投诉 | 付费用户流失 | 重置前明确警告 + 恢复密钥引导（TC5.3 全流程验证） |
-| AI 成本失控 | 利润侵蚀 | 积分软上限 + 模型路由 + Beta 实测校准定价 |
-| 闭源代码误入开源仓库 | 核心资产泄露 | .gitignore 硬隔离 + TC0.1 / TC7.5 双重检查 |
+| FTS5 Chinese tokenization is poor | search quality suffers | verify in T3.1.2; switch to trigram tokenizer + LIKE fallback if needed |
+| OCR background indexing hog | perceived lag | throttle in foreground + incremental resume (TC3.3) |
+| IAP review rejection (clipboard sensitivity) | launch delay | T1.7 privacy filtering + T7.1.1 privacy policy first; self-check against the review checklist (TC7.4) |
+| Forgot-password UX complaints | paid-user churn | clear pre-reset warnings + recovery-key guidance (full TC5.3 flow) |
+| AI cost runaway | margin erosion | credit soft cap + model routing + beta-usage calibration |
+| Closed code leaks into the public repo | core asset exposure | .gitignore hard isolation + TC0.1 / TC7.5 double checks |

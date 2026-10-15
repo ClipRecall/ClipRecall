@@ -2,33 +2,34 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## 项目概况
+## Project Overview
 
-- **项目名**：ClipRecall —— macOS 剪贴板历史管理工具：多格式记录（文本 / 富文本 / 图片 / 文件 / URL / 代码 / 颜色）、极速召回粘贴、AI 增强（总结 / 翻译 / 润色 / 语义搜索等）、E2EE 云同步
-- **商业模式**：本地功能开源免费；云同步 + AI 内置额度订阅收费（Free / Pro / Pro+ 三档，Mac App Store 首发，后期加 Paddle）
-- **里程碑**：M1 本地 MVP → M2 AI 能力 → M3 变现闭环 → M4 发布（详见 docs/project-plan.md）
+- **Name**: ClipRecall — a macOS clipboard history manager: multi-format recording (text / rich text / images / files / URLs / code / colors), instant recall & paste, AI enhancements (summarize / translate / polish / semantic search, etc.), E2EE cloud sync
+- **Business model**: local features are open source & free; cloud sync + built-in AI credits are subscription-based (Free / Pro / Pro+ tiers, Mac App Store first, Paddle later)
+- **Milestones**: M1 local MVP → M2 AI → M3 monetization → M4 release (see docs/project-plan.md)
 
-## 关键设计决策（详情见 docs/architecture.md）
+## Key Design Decisions (details in docs/architecture.md)
 
-- **技术栈**：Swift 6 + SwiftUI（最低 macOS 14）；核心逻辑在 ClipRecallCore（SPM 库，零 UI 依赖，为跨平台留路）；GRDB（SQLite + FTS5）；服务端 Vapor + PostgreSQL(pgvector) + MinIO
-- **数据模型**：Clip（元数据）+ Format 格式包（镜像系统剪贴板多表示）；文件条目存引用不存副本；URL / 代码 / 颜色为派生类型
-- **E2EE**：主密钥 MK 双包裹（密码 KEK + 恢复密钥，恢复密钥仅忘密码时用）；每条目 DEK + AES-256-GCM；服务端哑存储；LWW 同步；改密码零移动、忘密码清云重传
-- **AI**：OpenAI 兼容协议统一接入；BYOK（免费档）与内置额度（Pro 积分制）双通道；Ollama / vLLM 自动检测；Vision 本机 OCR + NLEmbedding 本机语义搜索
-- **开源/闭源隔离（硬性规则）**：客户端 100% 开源；闭源（服务端 + 配置）只允许放在 `closed/`（被 .gitignore 忽略、内部独立私有 git）；开源代码禁止 import 闭源代码
+- **Tech stack**: Swift 6 + SwiftUI (macOS 14+); core logic lives in ClipRecallCore (SPM library, zero UI dependency, keeping the door open for cross-platform); GRDB (SQLite + FTS5); server: Vapor + PostgreSQL (pgvector) + MinIO
+- **Data model**: Clip (metadata) + Format bundle (mirrors the system pasteboard's multiple representations); file entries store references, never copies; URL / code / color are derived types
+- **E2EE**: master key MK double-wrapped (password KEK + recovery key; recovery key only used when the password is forgotten); per-item DEK + AES-256-GCM; dumb server storage; LWW sync; changing the password moves nothing, forgetting it clears cloud & re-uploads
+- **AI**: unified OpenAI-compatible protocol; dual channels — BYOK (free tier) and built-in credits (Pro); Ollama / vLLM auto-detection; on-device Vision OCR + NLEmbedding semantic search
+- **Open/closed isolation (hard rule)**: the client is 100% open source; closed code (server + configs) lives only in `closed/` (ignored by .gitignore, its own private git repo); open-source code must never import closed-source code
 
-## 开发工作流
+## Development Workflow
 
-- **任务粒度**：按 docs/project-plan.md 的子任务（T 编号）逐个开发，一次只做一个子任务；完成后执行 docs/manual-test-checklist.md 对应的人工测试（TC 编号）
-- **用户不懂 Mac/Swift 开发**：执行用户要求时，尽量用通俗语言解释当前在做什么、这个功能有什么用——不默认用户了解 Swift、Xcode、系统框架等概念；讨论技术方案时先讲清背景再给结论
-- **工程文件**：避免手改 project.pbxproj；App 工程用 Xcode 16+ 同步文件夹（或 Xcode 27.2+ JSON 格式 .xcproj），核心库走 SPM，工程结构变更交给 Xcode 或生成器
-- **Git 工作流（本项目约定，覆盖个人偏好部分，用户明确：main / dev 未开保护，直接推送到 dev）**：
-  1. 小改动直接推送dev分支，大改动或功能开发开辟新分支；
-  2. 改动前先 `git pull`；commit 前先确认当前分支；
-  3. 出现新文件类型时，判断是否需要添加 .gitignore；
-  4. `main` 保持发布用途，不直接推送
-- **编码流程**：遵守用户全局偏好——先给实现思路经批准后再写代码；适合单元测试的函数必须编写单元测试
+- **Task granularity**: develop one sub-task (T-number) at a time from docs/project-plan.md; after each one, run the corresponding manual tests (TC numbers) in docs/manual-test-checklist.md
+- **The user is not familiar with macOS/Swift development**: when carrying out their requests, explain in plain language what is being done and why it matters — do not assume knowledge of Swift, Xcode, or system frameworks; when discussing technical options, give the background before the conclusion
+- **Project files**: never hand-edit project.pbxproj; the app project is generated from project.yml via XcodeGen (re-run `xcodegen generate` after adding new App files); the core library is a plain SPM package
+- **Git workflow (project convention, overrides parts of the user's global preferences; the user explicitly confirmed: main / dev have no branch protection)**:
+  1. small changes are committed and pushed directly to the `dev` branch; large changes or feature work open a new branch;
+  2. `git pull` before making changes; confirm the current branch before committing;
+  3. when new file types appear, consider whether .gitignore needs updating;
+  4. `main` is the release branch — do not push to it directly
+- **Coding process**: follow the user's global preferences — present the implementation approach and get approval before writing code; functions suitable for unit testing must have unit tests
+- **Testing**: after every task, check docs/manual-test-checklist.md to decide whether the user needs to do manual testing, and review whether the checklist entries themselves are reasonable
 
-## 仓库现状
+## Repository Status
 
-- 代码尚未开工（阶段 0 进行中）；docs/ 已含完整技术架构、项目计划、人工测试清单
-- 构建 / 测试命令待工程建立后补充；当前分支以实际 git 状态为准
+- Stages 0 and 1 are complete (foundation + local engine); docs/ contains the architecture, the task plan and the manual test checklist in both English and Chinese
+- Current branch follows the actual git state; build with `xcodegen generate` + Xcode, tests with `swift test --package-path ClipRecallCore`

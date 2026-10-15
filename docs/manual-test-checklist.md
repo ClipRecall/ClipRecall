@@ -1,287 +1,285 @@
-# ClipRecall 人工测试清单
+# ClipRecall Manual Test Checklist
 
-> 配套文档：[技术架构](architecture.md)、[项目计划](project-plan.md)
-> **使用方式**：每个任务组（T X.Y）完成后，找到**同编号**的测试（TC X.Y）逐项手工验证并打勾——**TC 编号与任务组编号一一对应**，TC X.Y 就是 T X.Y 的测试。一个任务组有多个测试主题时，以加粗小标题分组。
-> **为什么需要人工测试**：剪贴板真实行为、系统权限（TCC）、跨 App 粘贴兼容、IAP 沙盒这些都无法被单元测试覆盖，只能手工验证。
+> Companion documents: [Technical Architecture](architecture.md), [Project Plan](project-plan.md). Chinese version: [manual-test-checklist.zh-CN.md](manual-test-checklist.zh-CN.md).
+> **How to use**: after finishing a task group (T X.Y), find the **same-numbered** test (TC X.Y) and verify each item by hand, ticking as you go — **TC numbers map one-to-one to task groups: TC X.Y is the test for T X.Y**. When one task group has multiple test themes, they are grouped under bold sub-headings.
+> **Why manual testing**: real pasteboard behavior, system permissions (TCC), cross-app paste compatibility and IAP sandboxing cannot be covered by unit tests — they must be verified by hand.
 
-## 0. 测试环境准备（一次性）✅
+## 0. Test environment setup (one-time) ✅
 
-- [x] 安装测试 App：Safari、Chrome、终端、VS Code、Finder、备忘录 / Pages（富文本）、微信、飞书、1Password（或任意密码管理器）
-- [x] 系统设置中开启"辅助功能"权限（TCC）
-- [x] 准备测试素材：长文本（>5000 字）、含表格与链接的富文本网页、中英文混排文本、截图（中英文各一张）、10MB+ 大图、多文件选择
-- [x] 约定"长期运行"场景：正常使用电脑一整天后，检查历史完整性与资源占用
-- [ ] 双设备测试（TC5.5 / TC5.6）需要第二台 Mac；无第二台设备时，该组测试推迟到设备到位后执行
+- [x] Install test apps: Safari, Chrome, Terminal, VS Code, Finder, Notes / Pages (rich text), WeChat, Feishu, 1Password (or any password manager)
+- [x] Enable the Accessibility permission in System Settings (TCC)
+- [x] Prepare test material: long text (>5000 chars), a rich-text web page with tables and links, mixed Chinese/English text, screenshots (one Chinese, one English), a 10MB+ image, multi-file selection
+- [x] Agree on a "long-run" scenario: use the machine normally for a full day, then check history completeness and resource usage
+- [ ] Two-device tests (TC5.5 / TC5.6) require a second Mac; postpone them until a second device is available
 
-## 阶段 0
+## Stage 0
 
-### TC0.1 代码隔离（对应 T0.1）
-- [x] `closed/` 目录被外层 git 忽略（git status 不出现任何 closed/ 文件）
-- [x] closed/ 内部为独立私有 git 仓库，可正常提交推送
-- [x] 开源仓库构建不依赖 closed/ 任何代码（删除 closed/ 后仍可完整构建）
+### TC0.1 Repository isolation (T0.1)
+- [x] `closed/` is ignored by the outer git (git status shows no closed/ files)
+- [x] closed/ is its own private git repository, committing and pushing normally
+- [x] The open-source repository builds without anything from closed/ (delete closed/ and it still builds)
 
-### TC0.3 数据库创建与迁移（对应 T0.3）
-- [x] 首次启动自动建库；重启后数据完整
-- [ ] migration v1 升级路径正常（构造旧版本库验证迁移脚本；v1 阶段暂无旧版本库可构造，此项留到 v2 出现时验证）
+### TC0.3 Database creation & migration (T0.3)
+- [x] First launch creates the database automatically; data survives restarts
+- [ ] migration v1 upgrade path works (construct an old-version database to verify the migration script; not possible during v1 — deferred until v2 exists)
 
-### TC0.4 日志（对应 T0.4）
-- [x] 各模块日志按级别正常输出
-- [ ] 正常运行 1 小时后日志无报错刷屏
+### TC0.4 Logging (T0.4)
+- [x] Logs are emitted per module at the correct levels
+- [ ] No error spam after running normally for 1 hour
 
-## 阶段 1：本地引擎
+## Stage 1: Local Engine
 
-> 本阶段验证依赖 T1.8 调试界面（调试列表 + 调试菜单），需在 T1.8 完成后执行；TC1.5 保留策略及 TC1.6 的自定义排除名单项，验证时机在阶段 2 的 T2.6.2 设置页完成后。
+> Manual-testing rhythm: **after the debug UI (T1.3) is done, run TC1.1 / TC1.2 / TC1.3; from then on, run each task group's TC right after completing it (build one, test one).** TC1.6 retention items and TC1.7's custom exclusion-list item are verified after the settings page (T2.6.2) in stage 2.
 
-### TC1.1 基础监听（对应 T1.1）
-- [ ] 从 Safari / Chrome / 终端 / VS Code 各复制一次，调试列表中均出现
-- [ ] 复制后 1 秒内出现在列表（轮询延迟可接受）
-- [ ] 连续快速复制 100 次，无丢失、无重复
-- [ ] 电脑睡眠唤醒后监听恢复，复制仍被记录
+### TC1.1 Basic monitoring (T1.1)
+- [x] Copying from Safari / Chrome / Terminal / VS Code each appears in the debug list
+- [x] Entries appear within 1 second (polling delay acceptable)
+- [x] 100 rapid consecutive copies: nothing lost, no duplicates
+- [x] After sleep & wake, monitoring recovers and copies are still recorded
 
-### TC1.2 格式包捕获（对应 T1.2）
+### TC1.2 Format capture (T1.2)
 
-**文本格式（T1.2.1）**
-- [ ] 纯文本复制后，在调试列表点击该条目复制 → 手动 Cmd+V 粘贴，原文保持（含中英文、emoji、多行、缩进）
+**Text (T1.2.1)**
+- [x] Copy plain text, click the entry in the debug list, press Cmd+V manually — the original is preserved (Chinese, English, emoji, multi-line, indentation)
 
-**富文本格式（T1.2.4）**
-- [ ] 从网页复制带格式文字（粗体 / 链接 / 表格）→ 调试列表点击复制 → 手动 Cmd+V 粘贴到备忘录，格式保持
-- [ ] 从 Pages / Numbers 复制表格 → 粘贴到备忘录，表格结构保持
-- [ ] 从备忘录复制文字 → 粘贴到 Pages，格式保持
+**Rich text (T1.2.4)**
+- [x] Copy formatted text from a web page (bold / links / tables) → click the entry → Cmd+V into Notes — formatting preserved
+- [x] Copy a table from Pages / Numbers → paste into Notes — table structure preserved
+- [x] Copy text from Notes → paste into Pages — formatting preserved
 
-**图片与文件（T1.2.2 / T1.2.3）**
-- [ ] 截屏（Cmd+Shift+4）后调试列表出现图片条目，缩略图正确
-- [ ] 浏览器中右键"复制图片"→ 调试列表出现
-- [ ] Finder 复制 1 个文件 / 多选文件 → 调试列表出现文件条目，图标与名称正确
-- [ ] 复制 2GB 大文件 → 历史正常记录且系统不卡（只存引用不存副本）
+**Images & files (T1.2.2 / T1.2.3)**
+- [x] Screenshot (Cmd+Shift+4) → the image entry appears in the debug list with a correct thumbnail
+- [x] "Copy image" in a browser → the entry appears
+- [x] Copy 1 file / multiple files in Finder → file entries appear with correct icon and name
+- [x] Copy a 2GB file → recorded normally with no system lag (references only, no copy)
 
-### TC1.3 类型识别（对应 T1.3）
-- [ ] 复制 URL → 调试列表显示域名与图标，识别为链接类型
-- [ ] 复制代码 → 调试列表语法高亮正确（分别验证 Swift / Python / JS）
-- [ ] 复制颜色值（如 #FF5733）→ 调试列表显示色块预览
+### TC1.3 Debug UI (T1.3)
+- [x] The menu bar dropdown shows recent entries (max 50), newest on top
+- [x] Clicking an entry copies it back to the clipboard (the verification entry point for TC1.2's formats)
+- [x] Debug menu items: pause/resume toggle and accessibility-permission entry work
 
-### TC1.4 去重与合并（对应 T1.4）
-- [ ] 连续复制同一内容 3 次 → 调试列表只有 1 条
-- [ ] 从网页复制大段文本（系统分片复制场景）→ 自动合并为 1 条完整文本
+### TC1.4 Type detection (T1.4)
+- [x] Copy a URL → link icon + domain shown, recognized as a link type
+- [x] Copy code → recognized as a code type with a language label (syntax highlighting deferred to the stage-2 panel)
+- [x] Copy a color value (e.g. #FF5733) → color swatch preview shown
 
-### TC1.5 存储与保留（对应 T1.5；验证时机：设置页 T2.6.2 完成后）
-- [ ] 设置上限 100 条 → 超过后最旧条目被清理
-- [ ] 设置保留 7 天 → 8 天前的条目被清理
-- [ ] 固定（Pin）的条目不受保留策略清理
+### TC1.5 Dedup & merge (T1.5)
+- [x] Copy the same content 3 times → only one entry in the list
+- [x] Copy a large text from a web page (system-chunked copy) → merged into one complete entry (hard to reproduce manually; guarded by 5 unit tests)
 
-### TC1.6 敏感过滤（对应 T1.6）
-- [ ] 在 1Password 复制密码 → 调试列表中不出现（默认排除名单，阶段 1 可验）
-- [ ] 复制银行卡号格式 / API key 格式文本 → 触发检测（不记录或打码展示）
-- [ ] 调试菜单手动暂停记录 → 复制不进调试列表；恢复后正常
-- [ ] 排除名单中的 App 复制内容 → 不记录（自定义排除名单在设置页 T2.6.2 完成后验证）
+### TC1.6 Storage & retention (T1.6; verify after the settings page T2.6.2)
+- [ ] Set a limit of 100 entries → oldest entries are cleaned beyond the limit
+- [ ] Set 7-day retention → entries older than 8 days are cleaned
+- [ ] Pinned entries are exempt from retention cleanup
 
-### TC1.7 权限（对应 T1.7）
-- [ ] 调试菜单点击"检查辅助功能权限"→ 授权引导跳转正常
-- [ ] 拒绝授权后功能优雅降级（提示如何开启，不崩溃）
+### TC1.7 Privacy filtering (T1.7)
+- [x] Copying a password in 1Password → never appears in the list (default exclusion list; verified in practice by temporarily adding TextEdit to the list)
+- [x] Copy card-number-format / API-key-format text → detected (masked display + category label; recalling pastes the full original)
+- [x] Debug-menu pause → copies stop entering the list; resume → normal (verified during T1.3.2)
+- [ ] Excluded-app copies are not recorded (custom exclusion list verified after the settings page T2.6.2)
 
-### TC1.8 调试界面（对应 T1.8）
-- [ ] 菜单栏下拉显示最近条目（上限 50 条），新条目自动置顶
-- [ ] 点击条目 → 内容复制回剪贴板（TC1.2 各格式测试的验证入口）
-- [ ] 调试菜单项：暂停记录开关、检查辅助功能权限入口可用
+### TC1.8 Permissions (T1.8)
+- [x] Debug-menu "Accessibility" click → guide card + jump to System Settings works (debug builds not appearing in the TCC list is a known system quirk; full grant testing deferred until proper signing)
+- [x] Graceful degradation without the permission: the guide card shows the unpermitted state normally, no crashes
 
-## 阶段 2：UI 与召回
+## Stage 2: UI & Recall
 
-### TC2.1 面板与渲染（对应 T2.1）
-- [ ] 菜单栏图标点击唤起面板
-- [ ] 文本 / 图片 / 文件 / URL / 代码 / 颜色六类条目渲染正确
-- [ ] 5000 条历史下面板滚动流畅（列表虚拟化生效；需先将保留上限临时调至 5000）
+### TC2.1 Panel & rendering (T2.1)
+- [ ] Clicking the menu bar icon opens the panel
+- [ ] Text / image / file / URL / code / color entries all render correctly
+- [ ] Scrolling 5000 entries stays smooth (list virtualization; temporarily raise the retention cap to 5000 first)
 
-### TC2.2 键盘交互（对应 T2.2）
-- [ ] 全键盘操作：唤起 → 上下选择 → 回车复制 → Esc 关闭
-- [ ] Shift+回车直接粘贴到前台 App，面板自动关闭
-- [ ] 面板弹出不抢前台 App 焦点，Esc 后焦点正确归还
+### TC2.2 Keyboard interaction (T2.2)
+- [ ] Full keyboard flow: open → arrow-select → Enter to copy → Esc to close
+- [ ] Shift+Enter pastes directly into the frontmost app and closes the panel
+- [ ] The panel never steals focus from the frontmost app; focus returns correctly after Esc
 
-### TC2.3 召回粘贴（对应 T2.3）
+### TC2.3 Paste compatibility matrix (core test, go app by app)
 
-**粘贴兼容矩阵（T2.3.1 / T2.3.2；逐 App 过一遍）**
-
-| App | 原格式粘贴 | 纯文本粘贴 |
+| App | Original-format paste | Plain-text paste |
 |---|---|---|
-| 备忘录 / Pages | ☐ | ☐ |
-| 终端 | ☐ | ☐ |
+| Notes / Pages | ☐ | ☐ |
+| Terminal | ☐ | ☐ |
 | VS Code | ☐ | ☐ |
-| 微信 / 飞书 | ☐ | ☐ |
-| Safari 地址栏 | ☐ | ☐ |
+| WeChat / Feishu | ☐ | ☐ |
+| Safari address bar | ☐ | ☐ |
 
-**粘贴模式（T2.3.3）**
-- [ ] 纯文本模式：从网页复制的带格式文字粘贴到备忘录，无格式污染
-- [ ] 原格式模式：粘贴到富文本编辑器，格式保持（与 TC1.2 富文本部分对应）
+**Paste modes (T2.3.3)**
+- [ ] Plain-text mode: formatted web text pastes into Notes without formatting pollution
+- [ ] Original-format mode: pasting into a rich-text editor preserves formatting (pairs with TC1.2)
 
-### TC2.4 条目管理（对应 T2.4）
-- [ ] Pin 条目后重启 App 仍在
-- [ ] 删除有确认交互；批量删除正常
-- [ ] 编辑条目后再复制，内容为修改后的版本
-- [ ] 多选 3 条合并复制 → 粘贴为连续完整内容
+### TC2.4 Entry management (T2.4)
+- [ ] Pinned entries survive app restarts
+- [ ] Delete asks for confirmation; batch delete works
+- [ ] Editing an entry then copying yields the edited version
+- [ ] Multi-select 3 entries and merge-copy → pastes as one continuous content
 
-### TC2.5 全局快捷键（对应 T2.5）
-- [ ] 自定义快捷键修改后生效
-- [ ] 与系统 / 常用 App 快捷键冲突时给出提示
-- [ ] 全屏应用、游戏中快捷键可唤起面板
+### TC2.5 Global hotkey (T2.5)
+- [ ] Custom hotkey takes effect after rebinding
+- [ ] Conflicts with system / common app shortcuts produce a hint
+- [ ] The hotkey works in fullscreen apps and games
 
-### TC2.6 设置与启动（对应 T2.6）
-- [ ] 开机自启（SMAppService）生效，重启电脑后自动运行
-- [ ] 所有设置项修改后即时生效或明确提示需重启
+### TC2.6 Settings & launch (T2.6)
+- [ ] Launch at login (SMAppService) works; the app auto-starts after reboot
+- [ ] All settings apply immediately or clearly prompt for a restart
 
-## 阶段 3：搜索
+## Stage 3: Search
 
-### TC3.1 全文搜索（对应 T3.1）
-- [ ] 中文关键词能命中对应条目（**记录分词不佳的案例**，决定是否切换 trigram tokenizer）
-- [ ] 英文搜索大小写不敏感
-- [ ] 模糊搜索（缺字 / 错字）在合理范围内命中
+### TC3.1 Full-text search (T3.1)
+- [ ] Chinese keywords hit the right entries (**record poor-tokenization cases** — decides whether to switch to the trigram tokenizer)
+- [ ] English search is case-insensitive
+- [ ] Fuzzy search (missing/wrong characters) hits within reason
 
-### TC3.2 过滤（对应 T3.2）
-- [ ] 搜索框输入即搜（防抖），无卡顿
-- [ ] 按类型（文本 / 图片 / 文件 / URL / 代码 / 颜色）过滤正确
-- [ ] 按来源 App 过滤正确
-- [ ] 按时间过滤正确；组合过滤正确
+### TC3.2 Filtering (T3.2)
+- [ ] Typing in the search box searches immediately (debounced), no lag
+- [ ] Filter by type (text / image / file / URL / code / color) works
+- [ ] Filter by source app works
+- [ ] Filter by time works; combined filters work
 
-### TC3.3 图片 OCR（对应 T3.3）
+### TC3.3 Image OCR (T3.3)
 
-**准确性（T3.3.1 / T3.3.3）**
-- [ ] 中文截图内容可被关键词搜索命中
-- [ ] 英文截图内容可被关键词搜索命中
-- [ ] 手写体 / 低分辨率截图（**记录失败案例**，评估是否值得优化）
+**Accuracy (T3.3.1 / T3.3.3)**
+- [ ] Chinese screenshot content is searchable by keyword
+- [ ] English screenshot content is searchable by keyword
+- [ ] Handwriting / low-resolution screenshots (**record failure cases**, evaluate whether it's worth optimizing)
 
-**资源占用（T3.3.2）**
-- [ ] 批量索引 100 张截图，CPU 占用可控、前台操作不卡
-- [ ] 索引中途重启，从断点继续不重头开始
+**Resource usage (T3.3.2)**
+- [ ] Batch-indexing 100 screenshots keeps CPU under control without foreground lag
+- [ ] Indexing resumes from where it stopped after a restart
 
-### TC3.4 本地语义搜索（对应 T3.4）
-- [ ] 用不含关键词的相关句子（如"上周的机票信息"）能搜到对应条目
-- [ ] 无关条目不出现（**记录误召回案例**）
-- [ ] 断网状态下语义搜索正常（本地方案）
+### TC3.4 Local semantic search (T3.4)
+- [ ] A related sentence without the keyword (e.g. "last week's flight info") finds the right entry
+- [ ] Unrelated entries don't appear (**record false-positive cases**)
+- [ ] Semantic search works offline (local implementation)
 
-## 阶段 4：AI
+## Stage 4: AI
 
-### TC4.1 Provider 连通性（对应 T4.1）
-- [ ] OpenAI / DeepSeek / Moonshot / 自定义端点各配置后调用成功
-- [ ] 错误的 API Key → 明确报错提示
-- [ ] Key 保存于 Keychain，重启后仍在
+### TC4.1 Provider connectivity (T4.1)
+- [ ] OpenAI / DeepSeek / Moonshot / custom endpoints each work after configuration
+- [ ] A wrong API key produces a clear error
+- [ ] Keys persist in the Keychain across restarts
 
-### TC4.2 AI 动作（对应 T4.2）
+### TC4.2 Action quality (T4.2)
 
-**动作质量（T4.2.1 / T4.2.3）**
-- [ ] 总结 / 翻译 / 润色 / 改写语气 / 解释代码五个动作结果合理
-- [ ] 流式输出逐字渲染，UI 不卡
+**Quality (T4.2.1 / T4.2.3)**
+- [ ] Summarize / translate / polish / rewrite tone / explain code all produce reasonable results
+- [ ] Streaming renders word by word without UI lag
 
-**边界（T4.2.2）**
-- [ ] 超长文本（>10k 字）→ 截断策略生效或明确提示
-- [ ] 断网 / 超时 / 供应商 5xx → 友好错误提示，可重试
-- [ ] 供应商响应乱码 / 非预期格式 → 不崩溃
+**Edge cases (T4.2.2)**
+- [ ] Very long text (>10k chars) → truncation kicks in or a clear hint appears
+- [ ] Offline / timeout / provider 5xx → friendly error, retryable
+- [ ] Garbled / unexpected provider responses → no crash
 
-### TC4.3 本地模型（对应 T4.3）
-- [ ] 本机 Ollama 运行中 → App 自动检测显示 ✅ + 模型下拉列表正确
-- [ ] Ollama 未安装 → 显示安装引导入口（跳转 Ollama 官方安装页）
-- [ ] vLLM 自定义端点配置后调用成功
-- [ ] 本地模型离线运行，无任何网络请求发出
+### TC4.3 Local models (T4.3)
+- [ ] With Ollama running locally → auto-detected ✅ + model dropdown is correct
+- [ ] Ollama not installed → install-guide entry shown (links to Ollama's official page)
+- [ ] vLLM custom endpoint works after configuration
+- [ ] Local models run offline — no network requests are made
 
-### TC4.4 结果管理（对应 T4.4）
-- [ ] AI 结果作为派生条目保存，可单独复制
-- [ ] 原条目内容不被覆盖
-- [ ] 动作历史可回溯查看
+### TC4.4 Result management (T4.4)
+- [ ] AI results are saved as derived entries and can be copied on their own
+- [ ] The original entry is never overwritten
+- [ ] Action history is browsable
 
-### TC4.5 隐私交互（对应 T4.5）
-- [ ] 每次调用前出现确认弹窗；取消则不发送任何数据
-- [ ] BYOK 模式提示"直连您的供应商"；内置额度模式提示"经我方服务器临时处理"
-- [ ] AI 功能默认关闭，需手动开启
+### TC4.5 Privacy interaction (T4.5)
+- [ ] A confirmation dialog appears before every call; cancelling sends nothing
+- [ ] BYOK mode says "direct to your provider"; built-in-credits mode says "transiently processed by our server"
+- [ ] AI is off by default and must be enabled manually
 
-## 阶段 5：后端与同步
+## Stage 5: Backend & Sync
 
-### TC5.1 服务端部署（对应 T5.1）
-- [ ] Docker Compose 一键启动；HTTPS 证书正常
-- [ ] 备份脚本执行 + **恢复演练一次**（确认备份真能用）
+### TC5.1 Server deployment (T5.1)
+- [ ] Docker Compose starts everything with one command; HTTPS certificates work
+- [ ] Backup scripts run + **one restore drill** (prove the backups actually work)
 
-### TC5.2 账号（对应 T5.2；验证时机：T5.6.1 账号 UI 完成后）
-- [ ] 注册 / 登录 / 登出全流程
-- [ ] 弱密码被拒绝注册
-- [ ] 令牌过期后重新登录流程正常
+### TC5.2 Accounts (T5.2; verify after the account UI in T5.6.1)
+- [ ] Register / login / logout full flow
+- [ ] Weak passwords are rejected at registration
+- [ ] Expired tokens re-login cleanly
 
-### TC5.3 E2EE 密钥体系（对应 T5.3；验证时机：T5.6.1 账号 UI 完成后）
+### TC5.3 E2EE key system (T5.3; verify after the account UI in T5.6.1)
 
-**密码生命周期（T5.3.2 / T5.3.3 / T5.3.4）**
-- [ ] 修改密码（知道旧密码）→ 零数据移动，其他设备无感知
-- [ ] 忘记密码 + 有恢复密钥 → 零丢失恢复
-- [ ] 忘记密码 + 无恢复密钥 → 弹出警告（含"云端有 N 条未同步到设备"）→ 清云重传后本地数据完整
+**Password lifecycle (T5.3.2 / T5.3.3 / T5.3.4)**
+- [ ] Change password (old one known) → zero data movement, other devices unaffected
+- [ ] Forgot password + recovery key → zero-loss recovery
+- [ ] Forgot password without recovery key → warning shown (with "N cloud entries not synced to this device") → cloud cleared & re-uploaded, local data intact
 
-**恢复密钥（T5.3.5）**
-- [ ] 注册时生成与保存引导流程顺畅
-- [ ] 登录后设置页可随时重新生成
-- [ ] 重新生成恢复密钥 → 旧密钥立即失效
+**Recovery key (T5.3.5)**
+- [ ] Generated at registration with smooth save guidance
+- [ ] Regenerable any time in settings after login
+- [ ] Regenerating invalidates the old key immediately
 
-### TC5.4 条目加密（对应 T5.4；人工抽查服务端）
-- [ ] 服务端数据库与对象存储中**找不到任何明文剪贴板内容**
-- [ ] 信封元数据仅 id / 时间 / 类型 / 大小四项
+### TC5.4 Per-entry encryption (T5.4; spot-check the server)
+- [ ] The server database and object storage contain **no plaintext clipboard content**
+- [ ] Envelope metadata is limited to id / time / type / size
 
-### TC5.5 同步（对应 T5.5）
-- [ ] 双设备（同账号）互相同步，新条目双向可见
-- [ ] 删除操作同步为删除（tombstone 生效）
-- [ ] 双设备同时编辑同一 pin → LWW 后状态一致
-- [ ] 断网期间复制 → 恢复网络后自动续传
-- [ ] 服务端宕机 → 本地功能完全不受影响
+### TC5.5 Sync (T5.5)
+- [ ] Two devices (same account) sync both ways; new entries appear on both
+- [ ] Deletes propagate (tombstones work)
+- [ ] Simultaneously editing the same pin on two devices → LWW leaves them consistent
+- [ ] Copies made offline upload automatically when the network returns
+- [ ] Server down → local features completely unaffected
 
-### TC5.6 多设备自愈（对应 T5.6；含 T5.3.6 MK epoch）
-- [ ] 设备 A 重置密码 → 设备 B 检测到 epoch 变化提示重新登录 → 重新登录后云端数据为两设备并集（无重复条目）
+### TC5.6 Multi-device self-healing (T5.6; includes T5.3.6 MK epoch)
+- [ ] Device A resets its password → device B detects the epoch change and asks to re-login → after re-login the cloud holds the union of both devices (no duplicates)
 
-## 阶段 6：订阅与积分
+## Stage 6: Subscriptions & Credits
 
-### TC6.1 IAP 购买（对应 T6.1；StoreKit 沙盒）
-- [ ] Pro 月付 / 年付、Pro+ 月付 / 年付、加油包在沙盒内均可购买
-- [ ] 月付与年付均验证
-- [ ] 取消订阅 / 恢复购买流程正常
+### TC6.1 IAP purchases (T6.1; StoreKit sandbox)
+- [ ] Pro monthly / yearly, Pro+ monthly / yearly and top-up packs are all purchasable in the sandbox
+- [ ] Monthly and yearly both verified
+- [ ] Cancel subscription / restore purchases work
 
-### TC6.2 权益同步（对应 T6.2）
+### TC6.2 Entitlement sync (T6.2)
 
-**订阅生命周期（T6.2.1 / T6.2.3）**
-- [ ] 试用期 → 续费 → 到期降级 Free → 重新订阅，各阶段权益正确
-- [ ] 权益切换后功能即时开 / 关（云同步 / AI 额度 / 语义搜索）
+**Subscription lifecycle (T6.2.1 / T6.2.3)**
+- [ ] Trial → renew → expire & downgrade to Free → re-subscribe: entitlements are correct at each stage
+- [ ] Entitlement changes switch features on/off immediately (sync / AI credits / semantic search)
 
-**退款与宽限（T6.2.2）**
-- [ ] 沙盒模拟退款 → 服务端收回权益
-- [ ] 账单失败进入宽限期 → 宽限后自动降级
+**Refunds & grace (T6.2.2)**
+- [ ] Sandbox-simulated refund → the server revokes the entitlement
+- [ ] Billing failure enters the grace period → auto-downgrade afterwards
 
-### TC6.3 网关（对应 T6.3）
-- [ ] 内置额度调用经服务端网关转发成功
-- [ ] 服务端日志确认**无明文落盘**
+### TC6.3 Gateway (T6.3)
+- [ ] Built-in-credit calls go through the server gateway successfully
+- [ ] Server logs confirm **no plaintext is persisted**
 
-### TC6.4 积分（对应 T6.4）
-- [ ] 每次 AI 动作扣减实时准确
-- [ ] 月度结转生效（最多滚存 1 个月额度）
-- [ ] 额度耗尽 → 硬停 + 引导购买加油包
-- [ ] 加油包购买后额度即时增加；多设备额度一致
+### TC6.4 Credits (T6.4)
+- [ ] Every AI action debits accurately in real time
+- [ ] Monthly rollover works (capped at one month's allowance)
+- [ ] Out of credits → hard stop + top-up guidance
+- [ ] Buying a top-up pack adds credits instantly; the balance is consistent across devices
 
-### TC6.5 通道切换（对应 T6.5）
-- [ ] BYOK ↔ 内置额度切换即时生效，互不串扰
-- [ ] 无订阅用户使用 BYOK 全动作正常（免费档核心体验）
+### TC6.5 Channel switching (T6.5)
+- [ ] BYOK ↔ built-in-credits switching takes effect instantly without interference
+- [ ] Unsubscribed users get full BYOK actions (the free tier's core experience)
 
-## 阶段 7：发布前回归
+## Stage 7: Pre-release Regression
 
-### TC7.1 合规（对应 T7.1）
-- [ ] 隐私政策与 App 实际行为一致（E2EE 承诺、AI 临时明文例外、元数据明示）
-- [ ] 官网可访问，订阅引导正确
+### TC7.1 Compliance (T7.1)
+- [ ] The privacy policy matches actual app behavior (E2EE promises, transient-AI exception, metadata disclosure)
+- [ ] The website is reachable and subscription guidance is correct
 
-### TC7.2 TestFlight（对应 T7.2）
-- [ ] 邀请 / 安装 / 更新全流程
-- [ ] Beta 反馈收集渠道可用，反馈归入任务管理
+### TC7.2 TestFlight (T7.2)
+- [ ] Invite / install / update full flow
+- [ ] Beta feedback channel works and feeds the task tracker
 
-### TC7.3 性能（对应 T7.3）
-- [ ] 冷启动 < 2s
-- [ ] 面板唤起体感即时（< 100ms 目标）
-- [ ] 连续使用一整天：内存稳定、无泄漏、无崩溃
+### TC7.3 Performance (T7.3)
+- [ ] Cold start < 2s
+- [ ] Panel opens feeling instant (< 100ms target)
+- [ ] A full day of continuous use: stable memory, no leaks, no crashes
 
-### TC7.4 上架（对应 T7.4）
-- [ ] 公证后下载安装无 Gatekeeper 警告
-- [ ] 沙盒环境下全功能可用
-- [ ] 按 App Store 审核清单逐项自检（剪贴板权限说明、隐私标签）
+### TC7.4 App Store submission (T7.4)
+- [ ] Notarized build installs without Gatekeeper warnings
+- [ ] All features work under the sandbox
+- [ ] Self-check against the App Store review checklist (clipboard-permission disclosure, privacy labels)
 
-### TC7.5 开源（对应 T7.5）
-- [ ] 开源仓库干净构建通过（无私有依赖残留）
-- [ ] closed/ 未随开源仓库公开（.gitignore 生效，提交历史无闭源代码）
-- [ ] 全仓库无硬编码密钥 / 凭据泄露
-- [ ] README / Contributing / MIT License 完整
+### TC7.5 Open-source release (T7.5)
+- [ ] The public repository builds cleanly (no private dependencies)
+- [ ] closed/ is not part of the public repository (.gitignore effective, no closed code in history)
+- [ ] No hardcoded keys / credentials anywhere
+- [ ] README / Contributing / MIT License complete
 
 ---
 
-> 每次架构决策变更时，检查本清单是否需要增补对应测试项；测试中发现的问题记入 [项目计划](project-plan.md) 对应任务的产出要求。
+> When architecture decisions change, check whether this list needs new test entries; problems found during testing are recorded against the corresponding task's deliverable in [Project Plan](project-plan.md).

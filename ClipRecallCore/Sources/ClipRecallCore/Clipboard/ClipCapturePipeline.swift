@@ -1,0 +1,138 @@
+import Foundation
+
+/// 采集管道：变更事件 → 完整采集 → 落盘策略 → 组装 Clip → 存入缓存。
+/// 实现 ClipboardChangeHandling，直接交给生命周期管家使用。
+public final class ClipCapturePipeline: ClipboardChangeHandling, @unchecked Sendable {
+    private let pasteboard: PasteboardReading
+    private let storage: ClipStoring
+    private let blobManager: BlobFileManager
+    private let sourceAppProvider: SourceAppProviding?
+    private let exclusionList: AppExclusionList?
+    private let maskingRatio: Double
+    private let maskPosition: MaskPosition
+    private let lock = NSLock()
+    private var suppressionUntil: Date?
+    private var baselineFingerprint: String?
+
+    public init(
+        pasteboard: PasteboardReading,
+        storage: ClipStoring,
+        blobManager: BlobFileManager,
+        sourceAppProvider: SourceAppProviding? = nil,
+        exclusionList: AppExclusionList? = nil,
+        maskingRatio: Double = 0.5,
+        maskPosition: MaskPosition = .trailing
+    ) {
+        self.pasteboard = pasteboard
+        self.storage = storage
+        self.blobManager = blobManager
+        self.sourceAppProvider = sourceAppProvider
+        self.exclusionList = exclusionList
+        self.maskingRatio = maskingRatio
+        self.maskPosition = maskPosition
+    }
+
+    /// 抑制指定时长内的所有剪贴板变化（用于写回剪贴板后的"回声"抑制）。
+    /// 期间用户真实的复制也会被忽略——调试阶段可接受，正式版改为内容比对式抑制。
+    public func suppressChanges(for duration: TimeInterval) {
+        lock.lock()
+        suppressionUntil = Date().addingTimeInterval(duration)
+        lock.unlock()
+    }
+
+    /// 注册启动基线指纹：监听开始前剪贴板上已有的内容永不作为新条目记录。
+    public func setBaselineFingerprint(_ fingerprint: String) {
+        lock.lock()
+        baselineFingerprint = fingerprint
+        lock.unlock()
+    }
+
+    public func clipboardDidChange(changeCount: Int) {
+        lock.lock()
+        if let until = suppressionUntil {
+            if Date() < until {
+                lock.unlock()
+                return
+            }
+            suppressionUntil = nil
+        }
+        let baseline = baselineFingerprint
+        lock.unlock()
+
+        let formats = ClipContentCapture.capture(from: pasteboard)
+        guard !formats.isEmpty else { return }
+        var dispatched = PayloadWritePolicy.apply(to: formats, blobManager: blobManager)
+        // 代码条目：把语言名写入首个纯文本格式的元数据
+        if ClipTypeInference.primaryType(from: dispatched) == .code,
+           let plainText = ClipTypeInference.plainTextContent(from: dispatched),
+           let language = CodeLanguageDetection.detect(in: plainText),
+           let plainIndex = dispatched.firstIndex(where: { $0.type == FormatUTI.plainText }) {
+            dispatched[plainIndex].metadata.codeLanguage = language
+        }
+        // 敏感内容：把类别写入元数据，预览按比例与位置打码（原始内容不变）
+        if let plainText = ClipTypeInference.plainTextContent(from: dispatched),
+           let plainIndex = dispatched.firstIndex(where: { $0.type == FormatUTI.plainText }),
+           let info = SensitiveContentDetection.detect(
+               in: plainText, maskingRatio: maskingRatio, maskPosition: maskPosition
+           ) {
+            dispatched[plainIndex].metadata.sensitiveKind = info.kind
+        }
+        let identity = FormatFingerprint.contentIdentity(from: dispatched)
+
+        if let baseline {
+            if identity == baseline {
+                // 一次性基线：挡住启动抖动后即作废——之后复制相同内容应正常记录
+                Log.info("跳过基线内容（监听前已在剪贴板）", module: .clipboard)
+                baselineFingerprint = nil
+                return
+            }
+            // 首个不同内容出现 → 基线使命结束
+            baselineFingerprint = nil
+        }
+
+        // 排除名单拦截
+        let frontmost = sourceAppProvider?.frontmostApp()
+        if let frontmost, let exclusionList, exclusionList.contains(frontmost.bundleId) {
+            Log.info("来源 App 在排除名单中，跳过记录：\(frontmost.bundleId)", module: .clipboard)
+            return
+        }
+
+        let sourceApp: SourceApp?
+        if let frontmost {
+            sourceApp = SourceApp(bundleId: frontmost.bundleId, name: frontmost.name ?? frontmost.bundleId)
+        } else {
+            sourceApp = nil
+        }
+
+        let rawPreview = textPreview(from: dispatched)
+        let finalPreview = rawPreview.flatMap {
+            SensitiveContentDetection.detect(
+                in: $0, maskingRatio: maskingRatio, maskPosition: maskPosition
+            )?.maskedPreview
+        } ?? rawPreview
+
+        let clip = Clip(
+            sourceApp: sourceApp,
+            primaryType: ClipTypeInference.primaryType(from: dispatched),
+            formats: dispatched,
+            textPreview: finalPreview
+        )
+        do {
+            try storage.append(clip)
+        } catch {
+            Log.error("条目写入存储失败：\(error)", module: .clipboard)
+            return
+        }
+        Log.info(
+            "捕获新条目：\(clip.primaryType.rawValue)（\(dispatched.count) 个格式，changeCount=\(changeCount)）",
+            module: .clipboard
+        )
+    }
+
+    private func textPreview(from formats: [Format]) -> String? {
+        guard let plain = formats.first(where: { $0.type == FormatUTI.plainText }),
+              case .inline(let data) = plain.payload
+        else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+}
