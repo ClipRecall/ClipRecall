@@ -15,6 +15,7 @@ final class AppState {
     private let pasteboard = NSPasteboardAdapter()
     private let repository = ClipRepository()
     private let blobManager = BlobFileManager()
+    private let thumbnailService = ThumbnailService(generator: NSImageThumbnailGenerator())
     let faviconFetcher = FaviconFetcher()
     private let monitor: PasteboardMonitor
     private let lifecycle: ClipboardMonitorLifecycle
@@ -72,6 +73,24 @@ final class AppState {
             isPaused = true
             Log.info("暂停监听", module: .app)
         }
+    }
+
+    /// 取图片条目的原始图片数据（内联或落盘载荷）。
+    func imageData(for clip: Clip) -> Data? {
+        for format in clip.formats
+        where format.type == FormatUTI.png || format.type == FormatUTI.tiff {
+            switch format.payload {
+            case .inline(let data): return data
+            case .file(let path): return try? blobManager.read(relativePath: path)
+            }
+        }
+        return nil
+    }
+
+    /// 获取图片条目缩略图（异步，带缓存）。
+    func thumbnail(for clip: Clip) async -> Data? {
+        guard let data = imageData(for: clip) else { return nil }
+        return thumbnailService.thumbnail(for: data)
     }
 
     /// 辅助功能权限是否已开启（直接粘贴功能需要）。

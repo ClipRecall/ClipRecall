@@ -94,6 +94,8 @@ struct DebugListView: View {
                 )
                 .frame(width: 16, height: 16)
                 .overlay(Circle().stroke(.secondary.opacity(0.3), lineWidth: 1))
+        } else if clip.primaryType == .image {
+            ThumbnailView(clip: clip, appState: appState)
         } else if clip.primaryType == .url,
                   let preview = clip.textPreview,
                   let info = URLDetection.detect(in: preview) {
@@ -170,6 +172,32 @@ struct DebugListView: View {
         case .url: return "link"
         case .code: return "chevron.left.forwardslash.chevron.right"
         case .color: return "paintpalette"
+        }
+    }
+}
+
+/// 图片缩略图视图：异步加载，失败时显示默认图片图标。
+private struct ThumbnailView: View {
+    let clip: Clip
+    let appState: AppState
+    @State private var imageData: Data?
+
+    var body: some View {
+        Group {
+            if let imageData, let image = NSImage(data: imageData) {
+                Image(nsImage: image)
+                    .resizable()
+                    .interpolation(.high)
+                    .frame(width: 24, height: 24)
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
+            } else {
+                Image(systemName: "photo")
+                    .foregroundStyle(.secondary)
+                    .frame(width: 24, height: 24)
+            }
+        }
+        .task(id: clip.id) {
+            imageData = await appState.thumbnail(for: clip)
         }
     }
 }
