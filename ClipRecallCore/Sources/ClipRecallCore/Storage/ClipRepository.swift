@@ -38,11 +38,26 @@ struct FormatRecord: Codable, FetchableRecord, PersistableRecord {
 /// save 时执行与内存存储一致的追加策略（分片合并 + 全局去重）。
 public final class ClipRepository: ClipStoring, @unchecked Sendable {
     private let databaseManager: DatabaseManager
+    private let blobManager: BlobFileManager
     private let lock = NSLock()
     private var appendCallback: (@Sendable (Clip) -> Void)?
+    private var retentionPolicy: RetentionPolicy
 
-    public init(databaseManager: DatabaseManager = .shared) {
+    public init(
+        databaseManager: DatabaseManager = .shared,
+        blobManager: BlobFileManager = .shared,
+        retentionPolicy: RetentionPolicy = RetentionPolicy()
+    ) {
         self.databaseManager = databaseManager
+        self.blobManager = blobManager
+        self.retentionPolicy = retentionPolicy
+    }
+
+    /// 更新保留策略（设置页 T2.6.2 接入后由 UI 调用）。
+    public func setRetentionPolicy(_ policy: RetentionPolicy) {
+        lock.lock()
+        retentionPolicy = policy
+        lock.unlock()
     }
 
     /// 新条目保存后的通知（在写入线程执行）。
@@ -85,6 +100,7 @@ public final class ClipRepository: ClipStoring, @unchecked Sendable {
             }
             try insertClip(clip, in: db)
         }
+        try cleanupIfNeeded()
         notifyAppend(clip)
     }
 
@@ -162,6 +178,57 @@ public final class ClipRepository: ClipStoring, @unchecked Sendable {
     private func deleteClipRows(id: String, in db: Database) throws {
         try db.execute(sql: "DELETE FROM formats WHERE clipId = ?", arguments: [id])
         try db.execute(sql: "DELETE FROM clips WHERE id = ?", arguments: [id])
+    }
+
+    /// 保存后自动执行保留策略（Pin 豁免；落盘文件一并删除，防孤儿文件）。
+    private func cleanupIfNeeded() throws {
+        lock.lock()
+        let policy = retentionPolicy
+        lock.unlock()
+        guard policy.maxCount > 0 || policy.maxDays > 0 else { return }
+
+        let pool = try databaseManager.open()
+        var deletedPaths: [String] = []
+        try pool.write { db in
+            // 天数上限
+            if policy.maxDays > 0 {
+                let cutoff = Self.dateString(Date().addingTimeInterval(-Double(policy.maxDays) * 86_400))
+                let rows = try ClipRecord
+                    .filter(Column("isDeleted") == false && Column("pinned") == false && Column("capturedAt") < cutoff)
+                    .fetchAll(db)
+                deletedPaths += try Self.collectBlobPaths(clipIds: rows.map(\.id), in: db)
+                for row in rows {
+                    try deleteClipRows(id: row.id, in: db)
+                }
+            }
+            // 条数上限（最旧的未固定条目先清）
+            if policy.maxCount > 0 {
+                let count = try ClipRecord.filter(Column("isDeleted") == false).fetchCount(db)
+                if count > policy.maxCount {
+                    let excess = count - policy.maxCount
+                    let rows = try ClipRecord
+                        .filter(Column("isDeleted") == false && Column("pinned") == false)
+                        .order(Column("capturedAt").asc)
+                        .limit(excess)
+                        .fetchAll(db)
+                    deletedPaths += try Self.collectBlobPaths(clipIds: rows.map(\.id), in: db)
+                    for row in rows {
+                        try deleteClipRows(id: row.id, in: db)
+                    }
+                }
+            }
+        }
+        for path in deletedPaths {
+            try? blobManager.delete(relativePath: path)
+        }
+    }
+
+    private static func collectBlobPaths(clipIds: [String], in db: Database) throws -> [String] {
+        guard !clipIds.isEmpty else { return [] }
+        let records = try FormatRecord
+            .filter(clipIds.contains(Column("clipId")) && Column("payloadKind") == "file")
+            .fetchAll(db)
+        return records.compactMap(\.payloadPath)
     }
 
     // MARK: - 内部：查询

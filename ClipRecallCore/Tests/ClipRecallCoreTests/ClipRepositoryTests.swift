@@ -21,12 +21,63 @@ final class ClipRepositoryTests: XCTestCase {
         }
     }
 
-    private func makeClip(_ text: String, type: ClipType = .text) -> Clip {
+    private func makeClip(_ text: String, type: ClipType = .text, capturedAt: Date = Date()) -> Clip {
         Clip(
+            capturedAt: capturedAt,
             primaryType: type,
             formats: [Format(type: FormatUTI.plainText, payload: .inline(Data(text.utf8)))],
             textPreview: text
         )
+    }
+
+    func testMaxCountCleanupKeepsNewestAndPinned() throws {
+        try repository.setRetentionPolicy(RetentionPolicy(maxCount: 2, maxDays: 0))
+        var pinned = makeClip("固定条目")
+        pinned.pinned = true
+        try repository.save(pinned)
+        Thread.sleep(forTimeInterval: 0.01)
+        try repository.save(makeClip("新1"))
+        Thread.sleep(forTimeInterval: 0.01)
+        try repository.save(makeClip("新2"))
+        // 共 3 条 > 上限 2 → 清最旧的未固定条目（新1）；固定的最旧条目豁免
+        let fetched = try repository.fetchRecent(limit: 10)
+        XCTAssertEqual(fetched.map(\.textPreview), ["新2", "固定条目"])
+    }
+
+    func testMaxDaysCleanupRemovesOld() throws {
+        try repository.setRetentionPolicy(RetentionPolicy(maxCount: 0, maxDays: 7))
+        try repository.save(makeClip("旧条目", capturedAt: Date().addingTimeInterval(-8 * 86_400)))
+        try repository.save(makeClip("新条目"))
+        let fetched = try repository.fetchRecent(limit: 10)
+        XCTAssertEqual(fetched.map(\.textPreview), ["新条目"])
+    }
+
+    func testCleanupDeletesBlobFiles() throws {
+        let blobManager = BlobFileManager(
+            directoryURL: tempDirectory.appendingPathComponent("blobs", isDirectory: true)
+        )
+        let repo = ClipRepository(
+            databaseManager: DatabaseManager(directoryURL: tempDirectory),
+            blobManager: blobManager,
+            retentionPolicy: RetentionPolicy(maxCount: 1, maxDays: 0)
+        )
+        let bigData = Data(repeating: 0x66, count: 70 * 1024)
+        let path = try blobManager.write(bigData, fileExtension: "png")
+        let clip = Clip(
+            primaryType: .image,
+            formats: [Format(type: FormatUTI.png, payload: .file(path: path))]
+        )
+        try repo.save(clip)
+        Thread.sleep(forTimeInterval: 0.01)
+        try repo.save(makeClip("第二条"))
+        // clip 被清理 → blob 文件应一并删除
+        XCTAssertThrowsError(try blobManager.read(relativePath: path))
+    }
+
+    func testZeroPolicyNoCleanup() throws {
+        try repository.setRetentionPolicy(RetentionPolicy(maxCount: 0, maxDays: 0))
+        try repository.save(makeClip("旧条目", capturedAt: Date().addingTimeInterval(-90 * 86_400)))
+        XCTAssertEqual(try repository.fetchRecent(limit: 10).count, 1)
     }
 
     func testSaveAndFetchRoundTrip() throws {
