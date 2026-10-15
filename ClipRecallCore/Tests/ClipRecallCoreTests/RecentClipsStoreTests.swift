@@ -64,6 +64,47 @@ final class RecentClipsStoreTests: XCTestCase {
         XCTAssertEqual(store.clips.map(\.textPreview), ["A", "B"])
     }
 
+    func testContinuationWithinWindowMerges() {
+        let store = RecentClipsStore(limit: 10, mergeWindow: 1.5)
+        store.append(makeClip("前"))
+        store.append(makeClip("前半段"))
+        XCTAssertEqual(store.clips.count, 1)
+        XCTAssertEqual(store.clips[0].textPreview, "前半段")
+    }
+
+    func testContinuationBeyondWindowDoesNotMerge() {
+        let store = RecentClipsStore(limit: 10, mergeWindow: 0.1)
+        store.append(makeClip("前"))
+        Thread.sleep(forTimeInterval: 0.15)
+        store.append(makeClip("前半段"))
+        XCTAssertEqual(store.clips.count, 2)
+    }
+
+    func testIdenticalTextWithinWindowDeduplicatesNotMerges() {
+        let store = RecentClipsStore(limit: 10, mergeWindow: 1.5)
+        store.append(makeClip("相同"))
+        store.append(makeClip("相同"))
+        XCTAssertEqual(store.clips.count, 1)
+    }
+
+    func testNonPrefixWithinWindowDoesNotMerge() {
+        let store = RecentClipsStore(limit: 10, mergeWindow: 1.5)
+        store.append(makeClip("苹果"))
+        store.append(makeClip("香蕉"))
+        XCTAssertEqual(store.clips.count, 2)
+    }
+
+    func testNonTextDoesNotMerge() {
+        let store = RecentClipsStore(limit: 10, mergeWindow: 1.5)
+        store.append(makeClip("文字"))
+        let image = Clip(
+            primaryType: .image,
+            formats: [Format(type: FormatUTI.png, payload: .inline(Data([1, 2])))]
+        )
+        store.append(image)
+        XCTAssertEqual(store.clips.count, 2)
+    }
+
     func testSameTextWithDifferentFormatsDeduplicates() {
         // 回归：系统异步补格式导致格式包形态不同（如第二次多了 HTML），仍应去重
         let store = RecentClipsStore(limit: 10)
