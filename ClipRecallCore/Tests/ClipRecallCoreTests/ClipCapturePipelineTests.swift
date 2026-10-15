@@ -1,6 +1,24 @@
 import XCTest
 @testable import ClipRecallCore
 
+/// 假前台应用提供者。
+final class FakeSourceAppProvider: SourceAppProviding, @unchecked Sendable {
+    private let lock = NSLock()
+    private var app: FrontmostAppInfo?
+
+    func set(_ app: FrontmostAppInfo?) {
+        lock.lock()
+        self.app = app
+        lock.unlock()
+    }
+
+    func frontmostApp() -> FrontmostAppInfo? {
+        lock.lock()
+        defer { lock.unlock() }
+        return app
+    }
+}
+
 final class ClipCapturePipelineTests: XCTestCase {
     private var tempDirectory: URL!
     private var blobManager: BlobFileManager!
@@ -20,8 +38,70 @@ final class ClipCapturePipelineTests: XCTestCase {
         }
     }
 
-    private func makePipeline(pasteboard: PasteboardReading, store: RecentClipsStore) -> ClipCapturePipeline {
-        ClipCapturePipeline(pasteboard: pasteboard, storage: store, blobManager: blobManager)
+    private func makePipeline(
+        pasteboard: PasteboardReading,
+        store: RecentClipsStore,
+        sourceAppProvider: SourceAppProviding? = nil,
+        exclusionList: AppExclusionList? = nil
+    ) -> ClipCapturePipeline {
+        ClipCapturePipeline(
+            pasteboard: pasteboard,
+            storage: store,
+            blobManager: blobManager,
+            sourceAppProvider: sourceAppProvider,
+            exclusionList: exclusionList
+        )
+    }
+
+    func testExcludedAppIsSkipped() {
+        let pasteboard = FakeTextPasteboard()
+        pasteboard.setString("密码内容", forType: FormatUTI.plainText)
+        let provider = FakeSourceAppProvider()
+        provider.set(FrontmostAppInfo(bundleId: "com.1password.1password", name: "1Password"))
+        let list = AppExclusionList(defaults: ["com.1password.1password"])
+        let store = RecentClipsStore(limit: 10)
+        let pipeline = makePipeline(pasteboard: pasteboard, store: store, sourceAppProvider: provider, exclusionList: list)
+
+        pipeline.clipboardDidChange(changeCount: 1)
+        XCTAssertTrue(store.clips.isEmpty)
+    }
+
+    func testNonExcludedAppRecordedWithSourceApp() {
+        let pasteboard = FakeTextPasteboard()
+        pasteboard.setString("普通内容", forType: FormatUTI.plainText)
+        let provider = FakeSourceAppProvider()
+        provider.set(FrontmostAppInfo(bundleId: "com.apple.Safari", name: "Safari"))
+        let list = AppExclusionList(defaults: [])
+        let store = RecentClipsStore(limit: 10)
+        let pipeline = makePipeline(pasteboard: pasteboard, store: store, sourceAppProvider: provider, exclusionList: list)
+
+        pipeline.clipboardDidChange(changeCount: 1)
+        XCTAssertEqual(store.clips.count, 1)
+        XCTAssertEqual(store.clips[0].sourceApp, SourceApp(bundleId: "com.apple.Safari", name: "Safari"))
+    }
+
+    func testNoProviderStillRecords() {
+        let pasteboard = FakeTextPasteboard()
+        pasteboard.setString("无来源", forType: FormatUTI.plainText)
+        let store = RecentClipsStore(limit: 10)
+        let pipeline = makePipeline(pasteboard: pasteboard, store: store)
+
+        pipeline.clipboardDidChange(changeCount: 1)
+        XCTAssertEqual(store.clips.count, 1)
+        XCTAssertNil(store.clips[0].sourceApp)
+    }
+
+    func testExclusionListOperations() {
+        let list = AppExclusionList(defaults: [])
+        XCTAssertFalse(list.contains("com.example.a"))
+        list.add("com.example.a")
+        XCTAssertTrue(list.contains("com.example.a"))
+        list.remove("com.example.a")
+        XCTAssertFalse(list.contains("com.example.a"))
+    }
+
+    func testDefaultExclusionListNotEmpty() {
+        XCTAssertFalse(AppExclusionList.defaultBundleIds.isEmpty)
     }
 
     func testTextChangeProducesClip() {

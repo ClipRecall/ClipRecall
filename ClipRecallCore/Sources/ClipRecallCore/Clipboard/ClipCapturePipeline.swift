@@ -6,6 +6,8 @@ public final class ClipCapturePipeline: ClipboardChangeHandling, @unchecked Send
     private let pasteboard: PasteboardReading
     private let storage: ClipStoring
     private let blobManager: BlobFileManager
+    private let sourceAppProvider: SourceAppProviding?
+    private let exclusionList: AppExclusionList?
     private let lock = NSLock()
     private var suppressionUntil: Date?
     private var baselineFingerprint: String?
@@ -13,11 +15,15 @@ public final class ClipCapturePipeline: ClipboardChangeHandling, @unchecked Send
     public init(
         pasteboard: PasteboardReading,
         storage: ClipStoring,
-        blobManager: BlobFileManager
+        blobManager: BlobFileManager,
+        sourceAppProvider: SourceAppProviding? = nil,
+        exclusionList: AppExclusionList? = nil
     ) {
         self.pasteboard = pasteboard
         self.storage = storage
         self.blobManager = blobManager
+        self.sourceAppProvider = sourceAppProvider
+        self.exclusionList = exclusionList
     }
 
     /// 抑制指定时长内的所有剪贴板变化（用于写回剪贴板后的"回声"抑制）。
@@ -70,7 +76,22 @@ public final class ClipCapturePipeline: ClipboardChangeHandling, @unchecked Send
             baselineFingerprint = nil
         }
 
+        // 排除名单拦截
+        let frontmost = sourceAppProvider?.frontmostApp()
+        if let frontmost, let exclusionList, exclusionList.contains(frontmost.bundleId) {
+            Log.info("来源 App 在排除名单中，跳过记录：\(frontmost.bundleId)", module: .clipboard)
+            return
+        }
+
+        let sourceApp: SourceApp?
+        if let frontmost {
+            sourceApp = SourceApp(bundleId: frontmost.bundleId, name: frontmost.name ?? frontmost.bundleId)
+        } else {
+            sourceApp = nil
+        }
+
         let clip = Clip(
+            sourceApp: sourceApp,
             primaryType: ClipTypeInference.primaryType(from: dispatched),
             formats: dispatched,
             textPreview: textPreview(from: dispatched)

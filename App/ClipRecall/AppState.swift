@@ -30,7 +30,9 @@ final class AppState {
         pipeline = ClipCapturePipeline(
             pasteboard: pasteboard,
             storage: repository,
-            blobManager: blobManager
+            blobManager: blobManager,
+            sourceAppProvider: NSWorkspaceSourceAppProvider(),
+            exclusionList: AppExclusionList()
         )
         repository.onAppend = { [weak self] _ in
             guard let self else { return }
