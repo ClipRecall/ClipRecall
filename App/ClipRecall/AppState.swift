@@ -13,6 +13,8 @@ final class AppState {
     var isPaused = false
     /// 直接粘贴开关（默认关 = 进剪贴板手动 Cmd+V；T2.6.2 设置页接管）
     var directPasteEnabled = false
+    /// 纯文本粘贴开关（默认关 = 原格式；T2.6.2 设置页接管）
+    var plainTextPasteMode = false
     /// 面板打开前的 App（直接粘贴的目标）
     var previousApp: NSRunningApplication?
     private let directPastePerformer = DirectPastePerformer()
@@ -67,7 +69,7 @@ final class AppState {
 
     /// 点击/回车条目：把该条目的格式包写回剪贴板（面板关闭后由 performDirectPasteIfEnabled 决定是否自动粘贴）。
     func copyBack(_ clip: Clip) {
-        pastebackService.writeBack(clip)
+        pastebackService.writeBack(clip, plainTextOnly: plainTextPasteMode)
         // 抑制"回声"：1 秒静默窗，忽略写回引起的所有剪贴板变化
         pipeline.suppressChanges(for: 1.0)
         Log.info("调试列表复制回剪贴板：\(clip.primaryType.rawValue)", module: .app)

@@ -13,10 +13,17 @@ struct PastebackService {
         self.blobManager = blobManager
     }
 
-    /// 写回条目；无可用格式或写回失败返回 false。
+    /// 写回条目；plainTextOnly 时仅保留纯文本格式（剥离富文本）。
+    /// 无纯文本的条目（图片/文件）按原样写回——"纯文本"对它们无意义。
     @discardableResult
-    func writeBack(_ clip: Clip) -> Bool {
-        let items = PasteboardWritePayloads.items(from: clip.formats, blobManager: blobManager)
+    func writeBack(_ clip: Clip, plainTextOnly: Bool = false) -> Bool {
+        var items = PasteboardWritePayloads.items(from: clip.formats, blobManager: blobManager)
+        if plainTextOnly {
+            let plainItems = items.filter { $0.type == FormatUTI.plainText }
+            if !plainItems.isEmpty {
+                items = plainItems
+            }
+        }
         guard !items.isEmpty else {
             Log.warning("写回失败：条目无可用格式", module: .app)
             return false

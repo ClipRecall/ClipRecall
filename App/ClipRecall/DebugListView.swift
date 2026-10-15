@@ -102,6 +102,15 @@ struct DebugListView: View {
                 )
             }
             .help("开启后点击/回车自动粘贴到之前的 App；关闭则进剪贴板手动 Cmd+V（默认关闭，T2.6.2 设置页接管）")
+            Button {
+                appState.plainTextPasteMode.toggle()
+            } label: {
+                Label(
+                    "纯文本",
+                    systemImage: appState.plainTextPasteMode ? "doc.plaintext.fill" : "doc.plaintext"
+                )
+            }
+            .help("开启后粘贴剥离格式（纯文本）；关闭则保留原格式（默认关闭，T2.6.2 设置页接管）")
             Spacer()
             Button {
                 showPermissionGuide.toggle()

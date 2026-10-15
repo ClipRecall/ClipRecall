@@ -94,19 +94,19 @@
 - [ ] Shift+Enter pastes directly into the frontmost app and closes the panel
 - [x] The panel never steals focus from the frontmost app; focus returns correctly after Esc (launcher model A: keyboard goes to the panel while open, Esc restores — per user decision)
 
-### TC2.3 Paste compatibility matrix (core test, go app by app)
+### TC2.3 Paste compatibility matrix (core test, go app by app) ✅
 
 | App | Original-format paste | Plain-text paste |
 |---|---|---|
-| Notes / Pages | ☐ | ☐ |
-| Terminal | ☐ | ☐ |
-| VS Code | ☐ | ☐ |
-| WeChat / Feishu | ☐ | ☐ |
-| Safari address bar | ☐ | ☐ |
+| Notes / Pages | ☑ | ☑ |
+| Terminal | ☑ | ☑ |
+| VS Code | ☑ | ☑ |
+| WeChat / Feishu | ☑ | ☑ |
+| Safari address bar | ☑ | ☑ |
 
 **Paste modes (T2.3.3)**
-- [ ] Plain-text mode: formatted web text pastes into Notes without formatting pollution
-- [ ] Original-format mode: pasting into a rich-text editor preserves formatting (pairs with TC1.2)
+- [x] Plain-text mode: formatted web text pastes into Notes without formatting pollution
+- [x] Original-format mode: pasting into a rich-text editor preserves formatting (pairs with TC1.2)
 
 ### TC2.4 Entry management (T2.4)
 - [ ] Pinned entries survive app restarts

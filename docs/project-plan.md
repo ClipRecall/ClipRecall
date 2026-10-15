@@ -153,7 +153,7 @@
 |---|---|---|---|---|
 | T2.3.1 | [x] | Pasteboard write-back | multi-format NSPasteboard write | TC2.3 |
 | T2.3.2 | [x] | Direct paste | AX frontmost-app + CGEvent Cmd+V | TC2.3 |
-| T2.3.3 | [ ] | Plain-text paste mode | format-stripping write | TC2.3 |
+| T2.3.3 | [x] | Plain-text paste mode | format-stripping write | TC2.3 |
 
 ### T2.4 Entry management
 
