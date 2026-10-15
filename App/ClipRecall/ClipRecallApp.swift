@@ -16,15 +16,8 @@ struct ClipRecallApp: App {
         MenuBarExtra {
             DebugListView(appState: appState)
         } label: {
-            Image(nsImage: Self.menuBarIcon)
+            Image(nsImage: MenuBarIcon.icon)
         }
         .menuBarExtraStyle(.window)
-    }
-
-    /// 自定义菜单栏图标（模板图，自动适配深/浅色菜单栏）。
-    private static var menuBarIcon: NSImage {
-        let image = NSImage(named: "menubar-icon") ?? NSImage(systemSymbolName: "clipboard", accessibilityDescription: nil)!
-        image.isTemplate = true
-        return image
     }
 }
