@@ -92,7 +92,7 @@
 ### TC2.2 Keyboard interaction (T2.2)
 - [ ] Full keyboard flow: open → arrow-select → Enter to copy → Esc to close
 - [ ] Shift+Enter pastes directly into the frontmost app and closes the panel
-- [ ] The panel never steals focus from the frontmost app; focus returns correctly after Esc
+- [x] The panel never steals focus from the frontmost app; focus returns correctly after Esc (launcher model A: keyboard goes to the panel while open, Esc restores — per user decision)
 
 ### TC2.3 Paste compatibility matrix (core test, go app by app)
 

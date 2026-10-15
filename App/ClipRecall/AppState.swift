@@ -22,6 +22,8 @@ final class AppState {
     private let pipeline: ClipCapturePipeline
 
     init() {
+        // 启动即打开数据库（自动建目录、建表）；失败不阻塞界面
+        _ = try? DatabaseManager.shared.open()
         monitor = PasteboardMonitor(pasteboard: pasteboard)
         lifecycle = ClipboardMonitorLifecycle(
             monitor: monitor,

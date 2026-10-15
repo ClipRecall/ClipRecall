@@ -4,7 +4,10 @@ import ClipRecallCore
 /// 面板：头部（暂停/辅助功能）+ 条目列表（行渲染见 ClipRowView）。
 struct DebugListView: View {
     let appState: AppState
+    /// 关闭面板的回调（Esc / 点击外部由容器处理）
+    var onClose: (() -> Void)? = nil
     @State private var showPermissionGuide = false
+    @FocusState private var isListFocused: Bool
 
     var body: some View {
         VStack(spacing: 0) {
@@ -36,10 +39,19 @@ struct DebugListView: View {
                         .padding(.vertical, 8)
                     }
                     .frame(width: 320, height: 400)
+                    .focusable(true)
+                    .focused($isListFocused)
+                    .focusEffectDisabled()
                 }
             }
         }
         .padding(.vertical, 4)
+        .onAppear {
+            isListFocused = true
+        }
+        .onExitCommand {
+            onClose?()
+        }
     }
 
     private var header: some View {

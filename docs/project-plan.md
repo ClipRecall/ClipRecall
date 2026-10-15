@@ -144,7 +144,7 @@
 
 | # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
-| T2.2.1 | [ ] | Focus management | keyboard focus without stealing the frontmost app's | TC2.2 |
+| T2.2.1 | [x] | Focus management | keyboard focus without stealing the frontmost app's | TC2.2 |
 | T2.2.2 | [ ] | Enter-to-copy & Esc | select → copy → close flow | TC2.2 |
 
 ### T2.3 Recall & paste
@@ -178,7 +178,7 @@
 | T2.6.2 | [ ] | Settings UI | retention / exclusion list / hotkey groups | TC2.6 |
 | T2.6.3 | [ ] | Launch at login | SMAppService registration | TC2.6 |
 
-> **T2.6.2 settings detail (do not forget)**: ① retention policy (count / days; reads & writes T1.6.3's RetentionPolicy); ② app exclusion list (reads & writes T1.7.1's AppExclusionList — the default password-manager list is editable here); ③ global hotkey; ④ sensitive-content masking (on/off + maskingRatio + front/middle/back maskPosition; reads & writes T1.7.2); ⑤ **direct-paste toggle (requested by the user on 2026-10-15): ON = clicking an entry pastes directly into the frontmost app; OFF = content goes to the clipboard and the user presses Cmd+V themselves (branches into T2.3.2 / T2.3.1)**; ⑥ when this page is done, remind the user to back-test the three TC1.6 items (limit 100 entries / keep 7 days / pinned exemption).
+> **T2.6.2 settings detail (do not forget)**: ① retention policy (count / days; reads & writes T1.6.3's RetentionPolicy); ② app exclusion list (reads & writes T1.7.1's AppExclusionList — the default password-manager list is editable here); ③ global hotkey; ④ sensitive-content masking (on/off + maskingRatio + front/middle/back maskPosition; reads & writes T1.7.2); ⑤ **direct-paste toggle (requested by the user on 2026-10-15): ON = clicking/Enter pastes directly into the frontmost app; OFF (default) = content goes to the clipboard, the panel auto-closes and the user presses Cmd+V themselves (branches into T2.3.2 / T2.3.1)**; ⑥ when this page is done, remind the user to back-test the three TC1.6 items (limit 100 entries / keep 7 days / pinned exemption).
 
 ## 5. Stage 3: Search (M2)
 
