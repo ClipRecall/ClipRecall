@@ -86,7 +86,7 @@
 
 ### TC2.1 Panel & rendering (T2.1)
 - [x] Clicking the menu bar icon opens the panel
-- [ ] Text / image / file / URL / code / color entries all render correctly
+- [x] Text / image / file / URL / code / color entries all render correctly (per-type file icons included)
 - [x] Scrolling 5000 entries stays smooth (list virtualization; verified via the "Test data" debug button, auto-cleaned on restart)
 
 ### TC2.2 Keyboard interaction (T2.2)
