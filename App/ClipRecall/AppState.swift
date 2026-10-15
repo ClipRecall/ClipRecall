@@ -17,6 +17,7 @@ final class AppState {
     private let blobManager = BlobFileManager()
     private let thumbnailService = ThumbnailService(generator: NSImageThumbnailGenerator())
     let faviconFetcher = FaviconFetcher()
+    private let pastebackService: PastebackService
     private let monitor: PasteboardMonitor
     private let lifecycle: ClipboardMonitorLifecycle
     private let pipeline: ClipCapturePipeline
@@ -29,6 +30,7 @@ final class AppState {
             monitor: monitor,
             resumeNotificationNames: [NSWorkspace.didWakeNotification]
         )
+        pastebackService = PastebackService(pasteboard: pasteboard, blobManager: blobManager)
         pipeline = ClipCapturePipeline(
             pasteboard: pasteboard,
             storage: repository,
@@ -60,9 +62,7 @@ final class AppState {
 
     /// 点击调试列表条目：把该条目的格式包写回剪贴板。
     func copyBack(_ clip: Clip) {
-        let items = PasteboardWritePayloads.items(from: clip.formats, blobManager: blobManager)
-        guard !items.isEmpty else { return }
-        pasteboard.write(items)
+        pastebackService.writeBack(clip)
         // 抑制"回声"：1 秒静默窗，忽略写回引起的所有剪贴板变化
         pipeline.suppressChanges(for: 1.0)
         Log.info("调试列表复制回剪贴板：\(clip.primaryType.rawValue)", module: .app)
