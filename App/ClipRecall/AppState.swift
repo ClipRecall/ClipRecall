@@ -198,7 +198,7 @@ final class AppState {
     /// 按当前搜索词与过滤器查询（无过滤时等价最近列表）；新条目到达/删除/固定后的刷新也走这里，
     /// 保证筛选状态下列表仍符合条件。
     private func applyQuery() {
-        clips = (try? repository.fetchClips(
+        var results = (try? repository.fetchClips(
             query: searchText,
             filter: ClipFilter(
                 types: typeFilter.map { [$0] },
@@ -207,6 +207,16 @@ final class AppState {
             ),
             limit: 5000
         )) ?? []
+        // 语义兜底（T3.4.2）：关键词 + 过滤全无命中时，自动转语义检索（本地向量、离线可用）
+        let hasFilters = typeFilter != nil || sourceFilter != nil || timeFilter != nil
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if results.isEmpty && !query.isEmpty && !hasFilters {
+            results = (try? repository.semanticSearch(query: query).map(\.clip)) ?? []
+            if !results.isEmpty {
+                Log.info("关键词无命中，语义兜底 \(results.count) 条", module: .search)
+            }
+        }
+        clips = results
         sourceApps = (try? repository.fetchSourceApps()) ?? []
         Log.info("调试列表已刷新：\(clips.count) 条", module: .app)
     }

@@ -22,6 +22,9 @@ public enum DatabaseMigrations {
                 t.add(column: "ocrText", .text)
             }
         }
+        migrator.registerMigration("v5_createEmbeddings") { db in
+            try createEmbeddingsTable(db)
+        }
     }
 
     /// 全文搜索索引（T3.1.1）：clipId 只做关联键不参与分词，text 为可搜索文本。
@@ -65,6 +68,14 @@ public enum DatabaseMigrations {
             t.column("payloadPath", .text)
             t.column("metadata", .text)
             t.column("version", .integer).notNull().defaults(to: 1)
+        }
+    }
+
+    /// 语义向量表（T3.4.2）：Float32 小端原始字节；与 fts 同源的合并文本嵌入（L2 归一化）。
+    private static func createEmbeddingsTable(_ db: Database) throws {
+        try db.create(table: "embeddings") { t in
+            t.column("clipId", .text).notNull().primaryKey()
+            t.column("vector", .blob).notNull()
         }
     }
 }

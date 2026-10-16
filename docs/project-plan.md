@@ -212,7 +212,7 @@
 | # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
 | T3.4.1 | [x] | NLEmbedding vectorization | text → vectors | — |
-| T3.4.2 | [ ] | Vector store & search | local vector storage + cosine search | TC3.4 |
+| T3.4.2 | [x] | Vector store & search | local vector storage + cosine search | TC3.4 |
 
 ## 6. Stage 4: AI (M2)
 

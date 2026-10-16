@@ -39,6 +39,7 @@ struct FormatRecord: Codable, FetchableRecord, PersistableRecord {
 public final class ClipRepository: ClipStoring, @unchecked Sendable {
     private let databaseManager: DatabaseManager
     private let blobManager: BlobFileManager
+    private let embedder: any TextEmbedding
     private let lock = NSLock()
     private var appendCallback: (@Sendable (Clip) -> Void)?
     private var retentionPolicy: RetentionPolicy
@@ -46,11 +47,13 @@ public final class ClipRepository: ClipStoring, @unchecked Sendable {
     public init(
         databaseManager: DatabaseManager = .shared,
         blobManager: BlobFileManager = .shared,
-        retentionPolicy: RetentionPolicy = RetentionPolicy()
+        retentionPolicy: RetentionPolicy = RetentionPolicy(),
+        embedder: any TextEmbedding = TextEmbedder()
     ) {
         self.databaseManager = databaseManager
         self.blobManager = blobManager
         self.retentionPolicy = retentionPolicy
+        self.embedder = embedder
     }
 
     /// 更新保留策略（设置页 T2.6.2 接入后由 UI 调用）。
@@ -243,6 +246,19 @@ public final class ClipRepository: ClipStoring, @unchecked Sendable {
                     Self.searchableText(textPreview: preview, ocrText: text),
                 ]
             )
+            // 语义向量同步（T3.4.2）：OCR 后重新嵌入合并文本并覆盖；无文本则移除向量
+            let merged = Self.searchableText(textPreview: preview, ocrText: text)
+            if merged.isEmpty {
+                try db.execute(
+                    sql: "DELETE FROM embeddings WHERE clipId = ?",
+                    arguments: [clipId.uuidString]
+                )
+            } else if let vector = embedder.embed(merged) {
+                try db.execute(
+                    sql: "INSERT OR REPLACE INTO embeddings (clipId, vector) VALUES (?, ?)",
+                    arguments: [clipId.uuidString, Self.encodeVector(vector)]
+                )
+            }
         }
     }
 
@@ -268,13 +284,60 @@ public final class ClipRepository: ClipStoring, @unchecked Sendable {
         }
     }
 
-    /// 全量重建搜索索引（T3.1.3）：清空 fts 后从 clips 表重新灌入未删除条目的预览文本。
-    /// 覆盖场景：升级到 v3 后旧历史补索引、索引漂移修复。返回重建的行数。
+    /// 语义检索（T3.4.2）：查询向量与全库向量点积（归一化后 = 余弦相似度），
+    /// 降序取 Top K（分数低于 minScore 的剔除，阈值按实际效果调）。
+    /// 暴力全扫：几千条目毫秒级，无需向量索引。
+    public func semanticSearch(
+        query: String, limit: Int = 20, minScore: Double = 0.4
+    ) throws -> [(clip: Clip, score: Double)] {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, let queryVector = embedder.embed(trimmed) else { return [] }
+
+        let pool = try databaseManager.open()
+        return try pool.read { db in
+            let rows = try Row.fetchAll(db, sql: "SELECT clipId, vector FROM embeddings")
+            var scored: [(id: String, score: Double)] = []
+            for row in rows {
+                guard let clipId = row["clipId"] as String?,
+                      let data = row["vector"] as Data?,
+                      let vector = Self.decodeVector(data),
+                      vector.count == queryVector.count
+                else { continue }
+                let score = zip(queryVector, vector).reduce(0) { $0 + $1.0 * $1.1 }
+                if score >= minScore {
+                    scored.append((clipId, score))
+                }
+            }
+            scored.sort { $0.score > $1.score }
+            let top = scored.prefix(limit)
+            guard !top.isEmpty else { return [] }
+            let ids = top.map(\.id)
+            let records = try ClipRecord
+                .filter(ids.contains(Column("id")) && Column("isDeleted") == false)
+                .fetchAll(db)
+            let formatRecords = try FormatRecord
+                .filter(ids.contains(Column("clipId")))
+                .fetchAll(db)
+            let formatsByClip = Dictionary(grouping: formatRecords, by: \.clipId)
+            let clipsByID = Dictionary(uniqueKeysWithValues: records.compactMap { record in
+                Self.makeClip(record: record, formats: formatsByClip[record.id] ?? [])
+                    .map { (record.id, $0) }
+            })
+            return top.compactMap { entry in
+                clipsByID[entry.id].map { (clip: $0, score: entry.score) }
+            }
+        }
+    }
+
+    /// 全量重建搜索索引（T3.1.3）：清空 fts 后从 clips 表重新灌入未删除条目的预览文本；
+    /// 语义向量一并重嵌（派生数据，T3.4.2）。返回重建的索引行数。
     @discardableResult
     public func rebuildSearchIndex() throws -> Int {
         let pool = try databaseManager.open()
         return try pool.write { db in
-            try Self.rebuildFTSTable(in: db)
+            let count = try Self.rebuildFTSTable(in: db)
+            try rebuildEmbeddingsTable(in: db)
+            return count
         }
     }
 
@@ -310,6 +373,39 @@ public final class ClipRepository: ClipStoring, @unchecked Sendable {
         [textPreview, ocrText]
             .compactMap { $0?.isEmpty == false ? $0 : nil }
             .joined(separator: " ")
+    }
+
+    /// 语义向量重嵌（派生数据重建，随 rebuildSearchIndex 执行）。
+    private func rebuildEmbeddingsTable(in db: Database) throws {
+        try db.execute(sql: "DELETE FROM embeddings")
+        let rows = try Row.fetchAll(
+            db, sql: "SELECT id, textPreview, ocrText FROM clips WHERE isDeleted = 0"
+        )
+        for row in rows {
+            guard let id = row["id"] as String? else { continue }
+            let text = Self.searchableText(
+                textPreview: row["textPreview"] as String?,
+                ocrText: row["ocrText"] as String?
+            )
+            guard !text.isEmpty, let vector = embedder.embed(text) else { continue }
+            try db.execute(
+                sql: "INSERT INTO embeddings (clipId, vector) VALUES (?, ?)",
+                arguments: [id, Self.encodeVector(vector)]
+            )
+        }
+    }
+
+    /// 向量 → Float32 小端原始字节（BLOB）。
+    private static func encodeVector(_ vector: [Double]) -> Data {
+        vector.map { Float($0) }.withUnsafeBytes { Data($0) }
+    }
+
+    /// BLOB → 向量；字节数不是 Float 整数倍时返回 nil（防脏数据）。
+    private static func decodeVector(_ data: Data) -> [Double]? {
+        guard data.count % MemoryLayout<Float>.size == 0, !data.isEmpty else { return nil }
+        return data.withUnsafeBytes { buffer in
+            buffer.bindMemory(to: Float.self).map { Double($0) }
+        }
     }
 
     /// FTS 短语匹配：整体包成短语并转义内部引号，避免用户输入触发 FTS 查询语法。
@@ -354,6 +450,8 @@ public final class ClipRepository: ClipStoring, @unchecked Sendable {
             )
             // 软删除条目同样退出搜索索引
             try db.execute(sql: "DELETE FROM fts WHERE clipId = ?", arguments: [id.uuidString])
+            // 同步退出语义检索
+            try db.execute(sql: "DELETE FROM embeddings WHERE clipId = ?", arguments: [id.uuidString])
         }
     }
 
@@ -378,13 +476,18 @@ public final class ClipRepository: ClipStoring, @unchecked Sendable {
         }
         // 全文搜索索引（T3.1.1）：只索引打码后的预览文本，敏感内容完整值不可被搜索；
         // 保存时 OCR 尚未发生（ocrText = nil），OCR 文本由 setOCRText 同步进索引（T3.3.3）
+        let searchText = Self.searchableText(textPreview: clip.textPreview, ocrText: nil)
         try db.execute(
             sql: "INSERT INTO fts (clipId, text) VALUES (?, ?)",
-            arguments: [
-                clip.id.uuidString,
-                Self.searchableText(textPreview: clip.textPreview, ocrText: nil),
-            ]
+            arguments: [clip.id.uuidString, searchText]
         )
+        // 语义向量（T3.4.2）：与 fts 同源的合并文本嵌入；无文本/不可嵌入跳过
+        if !searchText.isEmpty, let vector = embedder.embed(searchText) {
+            try db.execute(
+                sql: "INSERT INTO embeddings (clipId, vector) VALUES (?, ?)",
+                arguments: [clip.id.uuidString, Self.encodeVector(vector)]
+            )
+        }
     }
 
     private func insertFormat(_ format: Format, clipId: String, in db: Database) throws {
@@ -414,6 +517,8 @@ public final class ClipRepository: ClipStoring, @unchecked Sendable {
         try db.execute(sql: "DELETE FROM clips WHERE id = ?", arguments: [id])
         // 同步清理搜索索引（覆盖去重替换 / 合并替换 / 更新 / 保留清理 / 清空全部）
         try db.execute(sql: "DELETE FROM fts WHERE clipId = ?", arguments: [id])
+        // 同步清理语义向量
+        try db.execute(sql: "DELETE FROM embeddings WHERE clipId = ?", arguments: [id])
     }
 
     /// 主动执行一次保留策略（App 启动时调用；save 内部也会自动执行）。
