@@ -21,13 +21,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         popover = NSPopover()
         popover.behavior = .transient   // 点击面板外部自动关闭
-        popover.contentViewController = NSHostingController(
+        let hostingController = NSHostingController(
             rootView: DebugListView(
                 appState: appState,
                 onClose: { [weak self] in self?.closePopover() },
                 onOpenSettings: { [weak self] in self?.openSettings() }
             )
         )
+        // 预渲染：强制首次布局，把一次性系统服务初始化（远程菜单托管等，ViewBridge 报错来源）
+        // 提前到启动阶段——否则首次打开面板时会卡一下
+        hostingController.view.frame = NSRect(x: 0, y: 0, width: 320, height: 500)
+        hostingController.view.layoutSubtreeIfNeeded()
+        popover.contentViewController = hostingController
 
         // 快捷键回调：呼出/收起面板
         appState.onHotkeyPressed = { [weak self] in

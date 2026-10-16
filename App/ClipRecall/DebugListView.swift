@@ -89,8 +89,8 @@ struct DebugListView: View {
             footer
         }
         .padding(.vertical, 4)
-        .onAppear {
-            isListFocused = true
+        .task {
+            isListFocused = true   // 渲染完成后异步聚焦（onAppear 期间改焦点会打断布局）
         }
         .onChange(of: appState.clips.map(\.id)) {
             selectedIndex = 0   // 查询结果变化时重置选中，避免索引越界
