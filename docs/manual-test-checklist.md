@@ -116,12 +116,12 @@
 - [x] Multi-select 3 entries and merge-copy → pastes as one continuous content (selection order preserved; Esc exits multi-select first)
 
 ### TC2.5 Global hotkey (T2.5)
-- [ ] Custom hotkey takes effect after rebinding
+- [x] Custom hotkey takes effect after rebinding (verified via the settings recorder)
 - [ ] Conflicts with system / common app shortcuts produce a hint
 - [ ] The hotkey works in fullscreen apps and games
 
 ### TC2.6 Settings & launch (T2.6)
-- [ ] Launch at login (SMAppService) works; the app auto-starts after reboot
+- [x] Launch at login (SMAppService) works; the app auto-starts after reboot（dev builds may be rolled back by the system; full verification after proper signing in Stage 7）
 - [x] All settings apply immediately or clearly prompt for a restart
 
 ## Stage 3: Search

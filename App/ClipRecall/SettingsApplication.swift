@@ -17,6 +17,14 @@ final class SettingsApplication {
         static let hotkeyKeyCode = "hotkey.keyCode"
         static let hotkeyModifiers = "hotkey.modifiers"
         static let excludedApps = "exclusion.bundleIds"
+        static let launchAtLogin = "general.launchAtLogin"
+    }
+
+    // MARK: - 登录时启动
+
+    var launchAtLogin: Bool {
+        get { store.string(forKey: Key.launchAtLogin) == "1" }
+        set { store.set(newValue ? "1" : "0", forKey: Key.launchAtLogin) }
     }
 
     // MARK: - 保留策略

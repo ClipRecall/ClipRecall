@@ -2,6 +2,7 @@ import AppKit
 import ApplicationServices
 import Foundation
 import Observation
+import ServiceManagement
 import ClipRecallCore
 
 /// 界面状态：持有核心服务、历史数据与全部设置。
@@ -24,6 +25,8 @@ final class AppState {
     var directPasteEnabled = false
     var plainTextPasteMode = false
     var excludedBundleIds: [String] = []
+    /// 登录时启动开关（以持久化偏好为准；调试构建系统注册可能被回滚，正式签名后稳定）
+    var launchAtLogin = false
 
     // MARK: 服务
 
@@ -95,6 +98,11 @@ final class AppState {
         directPasteEnabled = savedSettings.directPasteEnabled
         plainTextPasteMode = savedSettings.plainTextPasteMode
         excludedBundleIds = Array(savedSettings.excludedBundleIds).sorted()
+        // 登录启动自愈：偏好开启但系统未注册时补注册
+        launchAtLogin = savedSettings.launchAtLogin
+        if launchAtLogin, SMAppService.mainApp.status == .notRegistered {
+            try? SMAppService.mainApp.register()
+        }
         repository.setRetentionPolicy(RetentionPolicy(maxCount: retentionMaxCount, maxDays: retentionMaxDays))
         exclusionList.replaceAll(Set(excludedBundleIds))
 
@@ -135,6 +143,22 @@ final class AppState {
         excludedBundleIds = ids
         exclusionList.replaceAll(Set(ids))
         settings.excludedBundleIds = Set(ids)
+    }
+
+    /// 切换登录时启动（即时注册/注销 + 持久化偏好）。
+    func setLaunchAtLogin(_ enabled: Bool) {
+        do {
+            if enabled {
+                try SMAppService.mainApp.register()
+            } else {
+                try SMAppService.mainApp.unregister()
+            }
+            launchAtLogin = enabled
+            settings.launchAtLogin = enabled
+            Log.info("登录时启动：\(enabled ? "开" : "关")", module: .app)
+        } catch {
+            Log.error("登录启动设置失败：\(error)", module: .app)
+        }
     }
 
     /// 录制新快捷键并重新注册。

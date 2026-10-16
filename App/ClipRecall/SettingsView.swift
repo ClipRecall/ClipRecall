@@ -33,6 +33,10 @@ struct SettingsView: View {
                         .multilineTextAlignment(.trailing)
                         .onSubmit { commitRetention() }
                 }
+                Toggle("登录时启动", isOn: Binding(
+                    get: { appState.launchAtLogin },
+                    set: { appState.setLaunchAtLogin($0) }
+                ))
                 hotkeyRecorder
             }
             Section("隐私") {
