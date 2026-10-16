@@ -161,7 +161,7 @@
 |---|---|---|---|---|
 | T2.4.1 | [x] | Pin / delete | actions + confirmation UI | TC2.4 |
 | T2.4.2 | ~~[ ]~~ | ~~Edit then copy~~ | **Cancelled 2026-10-16** — user judged it low-value/high-complexity; removed from scope | — |
-| T2.4.3 | [ ] | Multi-select merge | multi-select + concatenated copy | TC2.4 |
+| T2.4.3 | [x] | Multi-select merge | multi-select + concatenated copy | TC2.4 |
 
 ### T2.5 Global hotkey
 

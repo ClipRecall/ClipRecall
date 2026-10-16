@@ -113,7 +113,7 @@
 - [x] Delete asks for confirmation (batch delete not yet implemented)
 - [x] Clear-all button works with confirmation
 - ~~[ ] Editing an entry then copying yields the edited version~~（Cancelled 2026-10-16 — low value/high complexity）
-- [ ] Multi-select 3 entries and merge-copy → pastes as one continuous content
+- [x] Multi-select 3 entries and merge-copy → pastes as one continuous content (selection order preserved; Esc exits multi-select first)
 
 ### TC2.5 Global hotkey (T2.5)
 - [ ] Custom hotkey takes effect after rebinding

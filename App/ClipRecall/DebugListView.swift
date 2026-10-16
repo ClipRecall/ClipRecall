@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 import ClipRecallCore
 
@@ -8,6 +9,7 @@ struct DebugListView: View {
     var onClose: (() -> Void)? = nil
     @State private var showPermissionGuide = false
     @State private var selectedIndex: Int = 0
+    @State private var multiSelected: [UUID] = []   // 多选（按选择顺序）
     @State private var pendingDelete: Clip?
     @State private var showClearAllAlert = false
     @FocusState private var isListFocused: Bool
@@ -39,7 +41,7 @@ struct DebugListView: View {
                                     ClipRowView(
                                         clip: clip,
                                         appState: appState,
-                                        onCopy: { copyAndClose($0) },
+                                        onCopy: { handleRowClick($0) },
                                         onTogglePin: { appState.togglePin($0) },
                                         onDelete: { pendingDelete = $0 }
                                     )
@@ -47,6 +49,11 @@ struct DebugListView: View {
                                     .background(
                                         RoundedRectangle(cornerRadius: 6)
                                             .fill(Color.accentColor.opacity(selectedIndex == index ? 0.16 : 0))
+                                    )
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 6)
+                                            .stroke(Color.accentColor, lineWidth: 1.5)
+                                            .opacity(multiSelected.contains(clip.id) ? 1 : 0)
                                     )
                                     .onHover { hovering in
                                         if hovering { selectedIndex = index }
@@ -73,6 +80,10 @@ struct DebugListView: View {
                             proxy.scrollTo(appState.clips[selectedIndex].id)
                         }
                         .onKeyPress(.return) {
+                            if !multiSelected.isEmpty {
+                                mergeSelectedAndClose()
+                                return .handled
+                            }
                             guard appState.clips.indices.contains(selectedIndex) else { return .ignored }
                             copyAndClose(appState.clips[selectedIndex])
                             return .handled
@@ -87,7 +98,11 @@ struct DebugListView: View {
             isListFocused = true
         }
         .onExitCommand {
-            onClose?()
+            if !multiSelected.isEmpty {
+                multiSelected.removeAll()   // Esc 先退出多选
+            } else {
+                onClose?()
+            }
         }
         .alert(
             "删除该条目？",
@@ -181,6 +196,34 @@ struct DebugListView: View {
         appState.copyBack(clip)
         onClose?()   // 先关面板释放激活，再执行直接粘贴（若开关开启）
         appState.performDirectPasteIfEnabled()
+    }
+
+    /// 行点击：⌘点击 = 切换多选；普通点击 = 单条复制（并清空多选）。
+    private func handleRowClick(_ clip: Clip) {
+        if NSEvent.modifierFlags.contains(.command) {
+            toggleMultiSelect(clip)
+        } else {
+            multiSelected.removeAll()
+            copyAndClose(clip)
+        }
+    }
+
+    private func toggleMultiSelect(_ clip: Clip) {
+        if let index = multiSelected.firstIndex(of: clip.id) {
+            multiSelected.remove(at: index)
+        } else {
+            multiSelected.append(clip.id)
+        }
+    }
+
+    /// 按选择顺序合并复制多选项并关闭面板。
+    private func mergeSelectedAndClose() {
+        let clips = multiSelected.compactMap { id in
+            appState.clips.first { $0.id == id }
+        }
+        multiSelected.removeAll()
+        appState.mergeAndCopy(clips)
+        onClose?()
     }
 
     /// 仅未授权时显示的引导卡（授权后自动消失）。

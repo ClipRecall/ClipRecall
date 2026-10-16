@@ -144,6 +144,23 @@ final class AppState {
         }
     }
 
+    /// 多选合并复制：按选择顺序拼接纯文本，写回剪贴板（配合直接粘贴开关）。
+    func mergeAndCopy(_ clips: [Clip]) {
+        guard let text = ClipMerging.mergedText(from: clips) else {
+            Log.warning("合并复制失败：所选条目无纯文本", module: .app)
+            return
+        }
+        let merged = Clip(
+            primaryType: .text,
+            formats: [Format(type: FormatUTI.plainText, payload: .inline(Data(text.utf8)))],
+            textPreview: text
+        )
+        pastebackService.writeBack(merged, plainTextOnly: plainTextPasteMode)
+        pipeline.suppressChanges(for: 1.0)
+        performDirectPasteIfEnabled()
+        Log.info("已合并复制 \(clips.count) 条", module: .app)
+    }
+
     /// 清空全部历史（硬删除，含落盘文件）。
     func clearAllHistory() {
         do {
