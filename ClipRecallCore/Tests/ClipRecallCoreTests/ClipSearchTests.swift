@@ -59,8 +59,9 @@ final class ClipSearchTests: XCTestCase {
     }
 
     func testChineseQueryWithPunctuation() throws {
-        // TC3.1 分词案例观察点：unicode61 把全角标点（，）当作词元而非分隔符，
-        // 因此查询必须带上标点才能短语命中；不带标点时不命中（文本中确有标点，子串不成立）
+        // TC3.1 分词观察点（已用 fts5vocab 实测）：unicode61 把**连续汉字串当作单个词元**，
+        // 中文子串命中由 LIKE 兜底承担。带标点查询能命中（子串成立）；不带标点时不命中
+        // （文本中确有标点，子串不成立——正确行为）
         try repository.save(makeClip("搜索，历史记录"))
         XCTAssertEqual(try repository.search("搜索，历史").count, 1)
         XCTAssertEqual(try repository.search("搜索历史").count, 0)

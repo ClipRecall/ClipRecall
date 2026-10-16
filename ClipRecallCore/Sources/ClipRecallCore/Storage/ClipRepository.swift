@@ -223,12 +223,25 @@ public final class ClipRepository: ClipStoring, @unchecked Sendable {
     }
 
     /// 记录 OCR 结果（空字符串 = 识别完成但无文字/失败，同样标记完成避免重复处理）。
+    /// 同时同步搜索索引：FTS5 不支持 UPDATE，删旧行后插入"预览 + OCR"合并文本（T3.3.3）。
     public func setOCRText(clipId: UUID, _ text: String) throws {
         let pool = try databaseManager.open()
         try pool.write { db in
             try db.execute(
                 sql: "UPDATE clips SET ocrText = ? WHERE id = ?",
                 arguments: [text, clipId.uuidString]
+            )
+            let preview = try String.fetchOne(
+                db, sql: "SELECT textPreview FROM clips WHERE id = ?",
+                arguments: [clipId.uuidString]
+            )
+            try db.execute(sql: "DELETE FROM fts WHERE clipId = ?", arguments: [clipId.uuidString])
+            try db.execute(
+                sql: "INSERT INTO fts (clipId, text) VALUES (?, ?)",
+                arguments: [
+                    clipId.uuidString,
+                    Self.searchableText(textPreview: preview, ocrText: text),
+                ]
             )
         }
     }
@@ -280,14 +293,23 @@ public final class ClipRepository: ClipStoring, @unchecked Sendable {
         }
     }
 
-    /// 清空 fts 并从 clips 表重新灌入未删除条目的预览文本；返回重建行数。
+    /// 清空 fts 并从 clips 表重新灌入未删除条目的"预览 + OCR"合并文本；返回重建行数。
+    /// 必须拼接 ocrText——否则重建会丢失 OCR 搜索数据（T3.3.3）。
     private static func rebuildFTSTable(in db: Database) throws -> Int {
         try db.execute(sql: "DELETE FROM fts")
         try db.execute(sql: """
             INSERT INTO fts (clipId, text)
-            SELECT id, COALESCE(textPreview, '') FROM clips WHERE isDeleted = 0
+            SELECT id, TRIM(COALESCE(textPreview, '') || ' ' || COALESCE(ocrText, ''))
+            FROM clips WHERE isDeleted = 0
             """)
         return try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM fts") ?? 0
+    }
+
+    /// fts 可搜索文本：预览与 OCR 文本合并（空/ nil 部分剔除）。
+    private static func searchableText(textPreview: String?, ocrText: String?) -> String {
+        [textPreview, ocrText]
+            .compactMap { $0?.isEmpty == false ? $0 : nil }
+            .joined(separator: " ")
     }
 
     /// FTS 短语匹配：整体包成短语并转义内部引号，避免用户输入触发 FTS 查询语法。
@@ -298,7 +320,9 @@ public final class ClipRepository: ClipStoring, @unchecked Sendable {
         )
     }
 
-    /// LIKE 子串兜底（所有查询）：转义通配符后做子串匹配，仅在 textPreview 上扫描。
+    /// LIKE 子串兜底（所有查询）：转义通配符后做子串匹配。
+    /// 扫 fts 表的合并文本列——覆盖预览 + OCR 文本（T3.3.3），且 fts 只含活条目；
+    /// 中文子串搜索实际由这里承担（unicode61 把连续汉字串当作单个词元，FTS 短语匹配覆盖不到子串）。
     private static func likeMatch(_ query: String, in db: Database) throws -> [String] {
         let escaped = query
             .replacingOccurrences(of: "\\", with: "\\\\")
@@ -306,7 +330,7 @@ public final class ClipRepository: ClipStoring, @unchecked Sendable {
             .replacingOccurrences(of: "_", with: "\\_")
         return try String.fetchAll(
             db,
-            sql: "SELECT id FROM clips WHERE textPreview LIKE ? ESCAPE '\\' AND isDeleted = 0",
+            sql: "SELECT clipId FROM fts WHERE text LIKE ? ESCAPE '\\'",
             arguments: ["%\(escaped)%"]
         )
     }
@@ -352,10 +376,14 @@ public final class ClipRepository: ClipStoring, @unchecked Sendable {
         for format in clip.formats {
             try insertFormat(format, clipId: clip.id.uuidString, in: db)
         }
-        // 全文搜索索引（T3.1.1）：只索引打码后的预览文本，敏感内容完整值不可被搜索
+        // 全文搜索索引（T3.1.1）：只索引打码后的预览文本，敏感内容完整值不可被搜索；
+        // 保存时 OCR 尚未发生（ocrText = nil），OCR 文本由 setOCRText 同步进索引（T3.3.3）
         try db.execute(
             sql: "INSERT INTO fts (clipId, text) VALUES (?, ?)",
-            arguments: [clip.id.uuidString, clip.textPreview ?? ""]
+            arguments: [
+                clip.id.uuidString,
+                Self.searchableText(textPreview: clip.textPreview, ocrText: nil),
+            ]
         )
     }
 
