@@ -180,6 +180,28 @@ public final class ClipRepository: ClipStoring, @unchecked Sendable {
         }
     }
 
+    /// 历史中出现过的来源 App（T3.2.2 过滤栏数据源）：去重、排除软删除、按名称排序。
+    public func fetchSourceApps() throws -> [(bundleId: String, name: String)] {
+        let pool = try databaseManager.open()
+        return try pool.read { db in
+            let rows = try Row.fetchAll(
+                db,
+                sql: """
+                    SELECT sourceAppBundleId, sourceAppName FROM clips
+                    WHERE isDeleted = 0 AND sourceAppBundleId IS NOT NULL
+                    GROUP BY sourceAppBundleId
+                    ORDER BY sourceAppName COLLATE NOCASE
+                    """
+            )
+            return rows.compactMap { row in
+                guard let bundleId = row["sourceAppBundleId"] as String?,
+                      let name = row["sourceAppName"] as String?
+                else { return nil }
+                return (bundleId, name)
+            }
+        }
+    }
+
     /// 全量重建搜索索引（T3.1.3）：清空 fts 后从 clips 表重新灌入未删除条目的预览文本。
     /// 覆盖场景：升级到 v3 后旧历史补索引、索引漂移修复。返回重建的行数。
     @discardableResult
@@ -200,7 +222,7 @@ public final class ClipRepository: ClipStoring, @unchecked Sendable {
             let liveCount = try ClipRecord.filter(Column("isDeleted") == false).fetchCount(db)
             let indexCount = try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM fts") ?? 0
             guard liveCount != indexCount else { return false }
-            try Self.rebuildFTSTable(in: db)
+            _ = try Self.rebuildFTSTable(in: db)
             return true
         }
     }

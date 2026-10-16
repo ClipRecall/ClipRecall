@@ -15,6 +15,16 @@ final class AppState {
     var clips: [Clip] = []
     var isPaused = false
 
+    // MARK: 搜索与过滤（T3.2.2；修改走 setter 以统一应用查询）
+
+    var searchText = ""
+    var typeFilter: ClipType?
+    var sourceFilter: String?
+    var timeFilter: ClipTimeRange?
+    /// 来源 App 下拉数据源（去重、按名称排序）
+    var sourceApps: [(bundleId: String, name: String)] = []
+    private var searchTask: Task<Void, Never>?
+
     // MARK: 设置（只读展示值，修改走 setter）
 
     var retentionMaxCount = 2000
@@ -177,9 +187,51 @@ final class AppState {
     }
 
     private func reloadClips() {
-        // 调试阶段读取全部历史（虚拟化保证 5000 条也流畅）；正式面板可再定义展示上限
-        clips = (try? repository.recent(limit: 5000)) ?? []
+        applyQuery()
+    }
+
+    /// 按当前搜索词与过滤器查询（无过滤时等价最近列表）；新条目到达/删除/固定后的刷新也走这里，
+    /// 保证筛选状态下列表仍符合条件。
+    private func applyQuery() {
+        clips = (try? repository.fetchClips(
+            query: searchText,
+            filter: ClipFilter(
+                types: typeFilter.map { [$0] },
+                sourceAppBundleId: sourceFilter,
+                timeRange: timeFilter
+            ),
+            limit: 5000
+        )) ?? []
+        sourceApps = (try? repository.fetchSourceApps()) ?? []
         Log.info("调试列表已刷新：\(clips.count) 条", module: .app)
+    }
+
+    // MARK: 搜索与过滤 setter（修改即持久查询；搜索词带 250ms 防抖）
+
+    /// 搜索框输入：防抖 250ms，连续输入只查最后一次。
+    func setSearchText(_ text: String) {
+        searchText = text
+        searchTask?.cancel()
+        searchTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(250))
+            guard !Task.isCancelled else { return }
+            self?.applyQuery()
+        }
+    }
+
+    func setTypeFilter(_ type: ClipType?) {
+        typeFilter = type
+        applyQuery()
+    }
+
+    func setSourceFilter(_ bundleId: String?) {
+        sourceFilter = bundleId
+        applyQuery()
+    }
+
+    func setTimeFilter(_ range: ClipTimeRange?) {
+        timeFilter = range
+        applyQuery()
     }
 
     // MARK: 召回与粘贴

@@ -26,11 +26,12 @@ final class ClipFilterTests: XCTestCase {
         text: String? = nil,
         type: ClipType = .text,
         sourceBundleId: String? = nil,
+        sourceAppName: String? = nil,
         capturedAt: Date = Date()
     ) -> Clip {
         Clip(
             capturedAt: capturedAt,
-            sourceApp: sourceBundleId.map { SourceApp(bundleId: $0, name: $0) },
+            sourceApp: sourceBundleId.map { SourceApp(bundleId: $0, name: sourceAppName ?? $0) },
             primaryType: type,
             formats: [
                 Format(
@@ -141,5 +142,27 @@ final class ClipFilterTests: XCTestCase {
         try repository.save(makeClip(text: "条目3"))
         let hits = try repository.fetchClips(query: "", limit: 2)
         XCTAssertEqual(hits.count, 2)
+    }
+
+    func testFetchSourceAppsDeduplicated() throws {
+        try repository.save(makeClip(text: "a", sourceBundleId: "com.apple.Safari"))
+        try repository.save(makeClip(text: "b", sourceBundleId: "com.apple.Safari"))
+        try repository.save(makeClip(text: "c", sourceBundleId: "com.microsoft.VSCode"))
+        let apps = try repository.fetchSourceApps()
+        XCTAssertEqual(apps.map(\.bundleId).sorted(), ["com.apple.Safari", "com.microsoft.VSCode"])
+    }
+
+    func testFetchSourceAppsExcludesSoftDeleted() throws {
+        let clip = makeClip(text: "a", sourceBundleId: "com.only.ThisApp")
+        try repository.save(clip)
+        try repository.delete(id: clip.id)
+        XCTAssertTrue(try repository.fetchSourceApps().isEmpty)
+    }
+
+    func testFetchSourceAppsSortedByName() throws {
+        try repository.save(makeClip(text: "a", sourceBundleId: "com.z.App", sourceAppName: "Zebra"))
+        try repository.save(makeClip(text: "b", sourceBundleId: "com.a.App", sourceAppName: "Alpha"))
+        let apps = try repository.fetchSourceApps()
+        XCTAssertEqual(apps.map(\.name), ["Alpha", "Zebra"])
     }
 }

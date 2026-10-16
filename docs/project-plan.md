@@ -197,7 +197,7 @@
 | # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
 | T3.2.1 | [x] | Filter model | type / source / time combined queries | TC3.2 |
-| T3.2.2 | [ ] | Search & filter UI | search box + filter bar | TC3.2 |
+| T3.2.2 | [x] | Search & filter UI | search box + filter bar | TC3.2 |
 
 ### T3.3 Image OCR
 

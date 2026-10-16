@@ -20,22 +20,14 @@ struct DebugListView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
+            searchBar
+            filterBar
             if showPermissionGuide, !appState.hasAccessibilityPermission {
                 permissionGuide
             }
             Group {
                 if appState.clips.isEmpty {
-                    VStack(spacing: 8) {
-                        Image(systemName: "clipboard")
-                            .font(.largeTitle)
-                            .foregroundStyle(.secondary)
-                        Text("暂无历史")
-                            .font(.headline)
-                        Text(appState.isPaused ? "监听已暂停" : "去复制点什么吧")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    .frame(width: 300, height: 150)
+                    emptyState
                 } else {
                     ScrollViewReader { proxy in
                         ScrollView {
@@ -99,6 +91,9 @@ struct DebugListView: View {
         .padding(.vertical, 4)
         .onAppear {
             isListFocused = true
+        }
+        .onChange(of: appState.clips.map(\.id)) {
+            selectedIndex = 0   // 查询结果变化时重置选中，避免索引越界
         }
         .onExitCommand {
             if !multiSelected.isEmpty {
@@ -201,6 +196,129 @@ struct DebugListView: View {
         .padding(.vertical, 8)
     }
 
+    /// 搜索框（T3.2.2）：点击聚焦，面板打开时焦点仍在列表、键盘流不受影响；输入防抖在 AppState。
+    private var searchBar: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.secondary)
+            TextField("搜索历史", text: Binding(
+                get: { appState.searchText },
+                set: { appState.setSearchText($0) }
+            ))
+            .textFieldStyle(.plain)
+            if !appState.searchText.isEmpty {
+                Button {
+                    appState.setSearchText("")
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .help("清除搜索")
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+    }
+
+    /// 过滤栏（T3.2.2）：类型 / 来源 / 时间三个下拉，即时生效。
+    private var filterBar: some View {
+        HStack(spacing: 8) {
+            Menu {
+                Button("全部类型") { appState.setTypeFilter(nil) }
+                Divider()
+                ForEach(ClipType.allCases, id: \.rawValue) { type in
+                    Button(type.displayName) { appState.setTypeFilter(type) }
+                }
+            } label: {
+                filterLabel(appState.typeFilter?.displayName ?? "全部类型")
+            }
+            .help("按类型过滤")
+            Menu {
+                Button("全部来源") { appState.setSourceFilter(nil) }
+                if !appState.sourceApps.isEmpty {
+                    Divider()
+                    ForEach(appState.sourceApps, id: \.bundleId) { app in
+                        Button(app.name) { appState.setSourceFilter(app.bundleId) }
+                    }
+                }
+            } label: {
+                filterLabel(sourceFilterName ?? "全部来源")
+            }
+            .help("按来源 App 过滤")
+            Menu {
+                ForEach(timeOptions, id: \.label) { option in
+                    Button(option.label) { appState.setTimeFilter(option.range) }
+                }
+            } label: {
+                filterLabel(timeFilterLabel)
+            }
+            .help("按时间过滤")
+            Spacer()
+        }
+        .padding(.horizontal, 12)
+        .padding(.bottom, 6)
+    }
+
+    private var timeOptions: [(label: String, range: ClipTimeRange?)] {
+        [("全部时间", nil), ("今天", .today), ("近 7 天", .last7Days), ("近 30 天", .last30Days)]
+    }
+
+    private var sourceFilterName: String? {
+        guard let bundleId = appState.sourceFilter else { return nil }
+        return appState.sourceApps.first { $0.bundleId == bundleId }?.name
+    }
+
+    private var timeFilterLabel: String {
+        switch appState.timeFilter {
+        case .today: "今天"
+        case .last7Days: "近 7 天"
+        case .last30Days: "近 30 天"
+        case nil: "全部时间"
+        }
+    }
+
+    private func filterLabel(_ text: String) -> some View {
+        HStack(spacing: 4) {
+            Text(text)
+            Image(systemName: "chevron.down")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+        .font(.caption)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 3)
+        .background(
+            RoundedRectangle(cornerRadius: 5)
+                .fill(Color.gray.opacity(0.12))
+        )
+    }
+
+    /// 空态：区分"无匹配结果"（搜索/过滤激活）与"暂无历史"。
+    private var emptyState: some View {
+        VStack(spacing: 8) {
+            Image(systemName: hasActiveQuery ? "magnifyingglass" : "clipboard")
+                .font(.largeTitle)
+                .foregroundStyle(.secondary)
+            Text(hasActiveQuery ? "无匹配结果" : "暂无历史")
+                .font(.headline)
+            Text(
+                appState.isPaused ? "监听已暂停"
+                    : hasActiveQuery ? "换个关键词或清除过滤试试" : "去复制点什么吧"
+            )
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
+        .frame(width: 300, height: 150)
+    }
+
+    private var hasActiveQuery: Bool {
+        !appState.searchText.isEmpty
+            || appState.typeFilter != nil
+            || appState.sourceFilter != nil
+            || appState.timeFilter != nil
+    }
+
     /// 复制选中条目并自动关闭面板（默认行为：进剪贴板、用户手动 Cmd+V；自动粘贴开关见 T2.6.2 明细 ⑤）。
     private func copyAndClose(_ clip: Clip) {
         appState.copyBack(clip)
@@ -255,5 +373,20 @@ struct DebugListView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 12)
         .padding(.bottom, 8)
+    }
+}
+
+/// 类型过滤菜单的显示名（与行视图的类别标签一致）。
+private extension ClipType {
+    var displayName: String {
+        switch self {
+        case .text: "文本"
+        case .richText: "富文本"
+        case .image: "图片"
+        case .file: "文件"
+        case .url: "链接"
+        case .code: "代码"
+        case .color: "颜色"
+        }
     }
 }
