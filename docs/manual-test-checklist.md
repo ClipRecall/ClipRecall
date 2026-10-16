@@ -149,9 +149,9 @@
 - [x] Indexing resumes from where it stopped after a restart
 
 ### TC3.4 Local semantic search (T3.4)
-- [ ] A related sentence without the keyword (e.g. "last week's flight info") finds the right entry
-- [ ] Unrelated entries don't appear (**record false-positive cases**)
-- [ ] Semantic search works offline (local implementation)
+- [x] A related sentence without the keyword (e.g. "last week.s flight info") finds the right entry
+- [x] Unrelated entries don.t appear (no false-positive cases)
+- [x] Semantic search works offline (local implementation)
 
 ## Stage 4: AI
 
