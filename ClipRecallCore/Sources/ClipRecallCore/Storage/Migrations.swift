@@ -9,6 +9,16 @@ public enum DatabaseMigrations {
             try createClipsTable(db)
             try createFormatsTable(db)
         }
+        migrator.registerMigration("v2_createSettings") { db in
+            try createSettingsTable(db)
+        }
+    }
+
+    private static func createSettingsTable(_ db: Database) throws {
+        try db.create(table: "settings") { t in
+            t.column("key", .text).notNull().primaryKey()
+            t.column("value", .text).notNull()
+        }
     }
 
     private static func createClipsTable(_ db: Database) throws {
