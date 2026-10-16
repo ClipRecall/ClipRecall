@@ -122,8 +122,8 @@ public final class ClipRepository: ClipStoring, @unchecked Sendable {
         }
     }
 
-    /// 全文搜索（T3.1.2）：FTS5 短语匹配；中文查询附加 LIKE 子串并集兜底
-    /// （unicode61 分词器对夹标点等场景分词不佳，兜底保证不丢召回）；纯符号查询只走 LIKE。
+    /// 全文搜索（T3.1.2）：FTS5 整词短语匹配 + LIKE 子串并集兜底（所有查询统一子串语义——
+    /// FTS 整词匹配搜不到部分词，如 "swift" 命中 "SwiftUI"）。
     /// 只搜索打码后的预览文本——敏感内容完整值不可搜（隐私设计，与 T3.1.1 一致）。
     public func search(_ query: String, limit: Int = 100) throws -> [Clip] {
         // 关键词接口语义：空关键词返回空（只按过滤器查请走 fetchClips）
@@ -140,16 +140,15 @@ public final class ClipRepository: ClipStoring, @unchecked Sendable {
 
         let pool = try databaseManager.open()
         return try pool.read { db in
-            // 关键词 → id 集合（复用 FTS 短语 + 中文/符号 LIKE 兜底）
+            // 关键词 → id 集合：FTS 整词短语主查 + LIKE 子串并集兜底（所有查询，
+            // 含英文部分词；纯符号查询 FTS 无法分词，只走 LIKE）
             var keywordIds: Set<String>?
             if !trimmed.isEmpty {
                 var ids: [String] = []
                 if trimmed.containsTokenCharacter {
                     ids = try Self.ftsMatch(trimmed, in: db)
                 }
-                if trimmed.containsCJK || !trimmed.containsTokenCharacter {
-                    ids = Array(Set(ids + (try Self.likeMatch(trimmed, in: db))))
-                }
+                ids = Array(Set(ids + (try Self.likeMatch(trimmed, in: db))))
                 keywordIds = Set(ids)
             }
             var request = ClipRecord.filter(Column("isDeleted") == false)
@@ -245,7 +244,7 @@ public final class ClipRepository: ClipStoring, @unchecked Sendable {
         )
     }
 
-    /// LIKE 兜底（中文）：转义通配符后做子串匹配，仅在 textPreview 上扫描。
+    /// LIKE 子串兜底（所有查询）：转义通配符后做子串匹配，仅在 textPreview 上扫描。
     private static func likeMatch(_ query: String, in db: Database) throws -> [String] {
         let escaped = query
             .replacingOccurrences(of: "\\", with: "\\\\")
@@ -523,13 +522,6 @@ private extension String {
         0x3400...0x4DBF, 0x4E00...0x9FFF, 0xF900...0xFAFF,
     ]
 
-    /// 是否包含 CJK 字符（搜索含中文时启用 LIKE 兜底）。
-    var containsCJK: Bool {
-        unicodeScalars.contains { scalar in
-            Self.cjkRanges.contains { $0.contains(scalar.value) }
-        }
-    }
-
     /// 是否含可分词字符（字母 / 十进制数字 / CJK）。纯符号查询无法走 FTS（空短语），转 LIKE。
     /// 注意：不能用 CharacterSet.alphanumerics——它会误判 ①② 等带圈数字为可分词字符。
     var containsTokenCharacter: Bool {
@@ -537,7 +529,7 @@ private extension String {
             let properties = scalar.properties
             return properties.isAlphabetic
                 || properties.generalCategory == .decimalNumber
-                || containsCJK
+                || Self.cjkRanges.contains { $0.contains(scalar.value) }
         }
     }
 }

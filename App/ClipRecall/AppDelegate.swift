@@ -33,6 +33,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         appState.onHotkeyPressed = { [weak self] in
             self?.togglePopover()
         }
+        // 面板自动关闭：.transient 只在"点击外部"时关闭，键盘切走焦点（Cmd+Tab 等）不触发——
+        // 监听前台 App 切换，激活的不是 ClipRecall 自己就收起面板
+        NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard let self,
+                  let activatedApp = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+                  activatedApp.bundleIdentifier != Bundle.main.bundleIdentifier
+            else { return }
+            self.closePopover()
+        }
     }
 
     /// 打开设置窗口（复用同一个窗口实例）。

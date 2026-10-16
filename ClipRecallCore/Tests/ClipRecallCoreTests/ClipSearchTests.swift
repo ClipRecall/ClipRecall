@@ -102,4 +102,19 @@ final class ClipSearchTests: XCTestCase {
         let hits = try repository.search("common", limit: 2)
         XCTAssertEqual(hits.map(\.textPreview), ["common newest", "common middle"])
     }
+
+    func testEnglishPartialWordMatchesWholeToken() throws {
+        // Bug 修复锁定：FTS 整词匹配搜不到部分词（"swift" vs "SwiftUI"），LIKE 兜底补齐
+        try repository.save(makeClip("import AppKit"))
+        try repository.save(makeClip("import SwiftUI"))
+        let hits = try repository.search("swift")
+        XCTAssertEqual(hits.map(\.textPreview), ["import SwiftUI"])
+        // 大小写混合的部分词同样命中（SQLite LIKE 对 ASCII 大小写不敏感）
+        XCTAssertEqual(try repository.search("Swift").count, 1)
+    }
+
+    func testEnglishSubstringInURL() throws {
+        try repository.save(makeClip("https://platform.deepseek.com/usage"))
+        XCTAssertEqual(try repository.search("deepseek").count, 1)
+    }
 }
