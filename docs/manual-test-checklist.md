@@ -127,15 +127,15 @@
 ## Stage 3: Search
 
 ### TC3.1 Full-text search (T3.1)
-- [ ] Chinese keywords hit the right entries (**record poor-tokenization cases** — decides whether to switch to the trigram tokenizer)
-- [ ] English search is case-insensitive
-- [ ] Fuzzy search (missing/wrong characters) hits within reason
+- [x] Chinese keywords hit the right entries (**record poor-tokenization cases** — decides whether to switch to the trigram tokenizer; 2 cases recorded and fixed via fallback)
+- [x] English search is case-insensitive
+- [x] Fuzzy search (missing/wrong characters) hits within reason
 
 ### TC3.2 Filtering (T3.2)
-- [ ] Typing in the search box searches immediately (debounced), no lag
-- [ ] Filter by type (text / image / file / URL / code / color) works
-- [ ] Filter by source app works
-- [ ] Filter by time works; combined filters work
+- [x] Typing in the search box searches immediately (debounced), no lag
+- [x] Filter by type (text / image / file / URL / code / color) works
+- [x] Filter by source app works
+- [x] Filter by time works; combined filters work
 
 ### TC3.3 Image OCR (T3.3)
 
