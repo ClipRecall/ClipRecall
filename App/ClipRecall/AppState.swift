@@ -88,6 +88,12 @@ final class AppState {
         }
         // 启动时执行一次保留策略，再从数据库加载历史
         try? repository.enforceRetentionPolicy()
+        // 搜索索引自愈：行数不一致时全量重建（v0.2.0 升级后旧历史补索引走这里）
+        if let rebuilt = try? repository.rebuildSearchIndexIfNeeded() {
+            if rebuilt {
+                Log.info("搜索索引已重建（升级补索引或漂移修复）", module: .app)
+            }
+        }
 
         // 加载设置展示值并应用
         retentionMaxCount = savedSettings.retentionPolicy.maxCount

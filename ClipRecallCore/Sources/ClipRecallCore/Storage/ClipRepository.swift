@@ -158,6 +158,41 @@ public final class ClipRepository: ClipStoring, @unchecked Sendable {
         }
     }
 
+    /// 全量重建搜索索引（T3.1.3）：清空 fts 后从 clips 表重新灌入未删除条目的预览文本。
+    /// 覆盖场景：升级到 v3 后旧历史补索引、索引漂移修复。返回重建的行数。
+    @discardableResult
+    public func rebuildSearchIndex() throws -> Int {
+        let pool = try databaseManager.open()
+        return try pool.write { db in
+            try Self.rebuildFTSTable(in: db)
+        }
+    }
+
+    /// 自愈检查：索引行数与活条目数不一致时自动重建（App 启动时调用一次）。
+    /// 正常写入全走事务不会漂移，不一致只可能来自升级空表、bug 或外部改动。
+    /// 返回是否执行了重建。
+    @discardableResult
+    public func rebuildSearchIndexIfNeeded() throws -> Bool {
+        let pool = try databaseManager.open()
+        return try pool.write { db in
+            let liveCount = try ClipRecord.filter(Column("isDeleted") == false).fetchCount(db)
+            let indexCount = try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM fts") ?? 0
+            guard liveCount != indexCount else { return false }
+            try Self.rebuildFTSTable(in: db)
+            return true
+        }
+    }
+
+    /// 清空 fts 并从 clips 表重新灌入未删除条目的预览文本；返回重建行数。
+    private static func rebuildFTSTable(in db: Database) throws -> Int {
+        try db.execute(sql: "DELETE FROM fts")
+        try db.execute(sql: """
+            INSERT INTO fts (clipId, text)
+            SELECT id, COALESCE(textPreview, '') FROM clips WHERE isDeleted = 0
+            """)
+        return try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM fts") ?? 0
+    }
+
     /// FTS 短语匹配：整体包成短语并转义内部引号，避免用户输入触发 FTS 查询语法。
     private static func ftsMatch(_ query: String, in db: Database) throws -> [String] {
         let escaped = query.replacingOccurrences(of: "\"", with: "\"\"")
