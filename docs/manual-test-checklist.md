@@ -67,10 +67,10 @@
 - [x] Copy the same content 3 times → only one entry in the list
 - [x] Copy a large text from a web page (system-chunked copy) → merged into one complete entry (hard to reproduce manually; guarded by 5 unit tests)
 
-### TC1.6 Storage & retention (T1.6; verify after the settings page T2.6.2)
-- [ ] Set a limit of 100 entries → oldest entries are cleaned beyond the limit
-- [ ] Set 7-day retention → entries older than 8 days are cleaned
-- [ ] Pinned entries are exempt from retention cleanup
+### TC1.6 Storage & retention (T1.6; verified after the settings page T2.6.2)
+- [x] Set a limit of 100 entries → oldest entries are cleaned beyond the limit
+- [x] Set 7-day retention → entries older than 8 days are cleaned (verified with a small day value)
+- [x] Pinned entries are exempt from retention cleanup
 
 ### TC1.7 Privacy filtering (T1.7)
 - [x] Copying a password in 1Password → never appears in the list (default exclusion list; verified in practice by temporarily adding TextEdit to the list)
@@ -122,7 +122,7 @@
 
 ### TC2.6 Settings & launch (T2.6)
 - [ ] Launch at login (SMAppService) works; the app auto-starts after reboot
-- [ ] All settings apply immediately or clearly prompt for a restart
+- [x] All settings apply immediately or clearly prompt for a restart
 
 ## Stage 3: Search
 

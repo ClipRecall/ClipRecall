@@ -8,8 +8,8 @@ public final class ClipCapturePipeline: ClipboardChangeHandling, @unchecked Send
     private let blobManager: BlobFileManager
     private let sourceAppProvider: SourceAppProviding?
     private let exclusionList: AppExclusionList?
-    private let maskingRatio: Double
-    private let maskPosition: MaskPosition
+    private var currentMaskingRatio: Double
+    private var currentMaskPosition: MaskPosition
     private let lock = NSLock()
     private var suppressionUntil: Date?
     private var baselineFingerprint: String?
@@ -28,8 +28,22 @@ public final class ClipCapturePipeline: ClipboardChangeHandling, @unchecked Send
         self.blobManager = blobManager
         self.sourceAppProvider = sourceAppProvider
         self.exclusionList = exclusionList
-        self.maskingRatio = maskingRatio
-        self.maskPosition = maskPosition
+        self.currentMaskingRatio = maskingRatio
+        self.currentMaskPosition = maskPosition
+    }
+
+    /// 运行时更新打码参数（设置页调用）；ratio 为 0 时仅标注类别、不打码。
+    public func updateMasking(ratio: Double, position: MaskPosition) {
+        lock.lock()
+        currentMaskingRatio = ratio
+        currentMaskPosition = position
+        lock.unlock()
+    }
+
+    private var maskingParameters: (ratio: Double, position: MaskPosition) {
+        lock.lock()
+        defer { lock.unlock() }
+        return (currentMaskingRatio, currentMaskPosition)
     }
 
     /// 抑制指定时长内的所有剪贴板变化（用于写回剪贴板后的"回声"抑制）。
@@ -70,10 +84,11 @@ public final class ClipCapturePipeline: ClipboardChangeHandling, @unchecked Send
             dispatched[plainIndex].metadata.codeLanguage = language
         }
         // 敏感内容：把类别写入元数据，预览按比例与位置打码（原始内容不变）
+        let masking = maskingParameters
         if let plainText = ClipTypeInference.plainTextContent(from: dispatched),
            let plainIndex = dispatched.firstIndex(where: { $0.type == FormatUTI.plainText }),
            let info = SensitiveContentDetection.detect(
-               in: plainText, maskingRatio: maskingRatio, maskPosition: maskPosition
+               in: plainText, maskingRatio: masking.ratio, maskPosition: masking.position
            ) {
             dispatched[plainIndex].metadata.sensitiveKind = info.kind
         }
@@ -107,7 +122,7 @@ public final class ClipCapturePipeline: ClipboardChangeHandling, @unchecked Send
         let rawPreview = textPreview(from: dispatched)
         let finalPreview = rawPreview.flatMap {
             SensitiveContentDetection.detect(
-                in: $0, maskingRatio: maskingRatio, maskPosition: maskPosition
+                in: $0, maskingRatio: masking.ratio, maskPosition: masking.position
             )?.maskedPreview
         } ?? rawPreview
 

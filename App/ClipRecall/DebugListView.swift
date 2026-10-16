@@ -7,6 +7,8 @@ struct DebugListView: View {
     let appState: AppState
     /// 关闭面板的回调（Esc / 点击外部由容器处理）
     var onClose: (() -> Void)? = nil
+    /// 打开设置窗口的回调
+    var onOpenSettings: (() -> Void)? = nil
     @State private var showPermissionGuide = false
     @State private var selectedIndex: Int = 0
     @State private var multiSelected: [UUID] = []   // 多选（按选择顺序）
@@ -151,39 +153,34 @@ struct DebugListView: View {
     }
 
     private var header: some View {
-        HStack {
+        HStack(spacing: 10) {
             Button(action: appState.togglePause) {
-                Label(
-                    appState.isPaused ? "恢复记录" : "暂停记录",
-                    systemImage: appState.isPaused ? "play.circle" : "pause.circle"
-                )
+                Image(systemName: appState.isPaused ? "play.circle" : "pause.circle")
             }
+            .help(appState.isPaused ? "恢复记录" : "暂停记录")
             Button {
-                appState.directPasteEnabled.toggle()
+                appState.setDirectPaste(!appState.directPasteEnabled)
             } label: {
-                Label(
-                    "直接粘贴",
-                    systemImage: appState.directPasteEnabled ? "arrow.uturn.right.circle.fill" : "arrow.uturn.right.circle"
-                )
+                Image(systemName: appState.directPasteEnabled ? "arrow.uturn.right.circle.fill" : "arrow.uturn.right.circle")
             }
-            .help("开启后点击/回车自动粘贴到之前的 App；关闭则进剪贴板手动 Cmd+V（默认关闭，T2.6.2 设置页接管）")
+            .help("直接粘贴：开启后点击/回车自动粘贴到之前的 App；关闭则进剪贴板手动 Cmd+V（默认关闭）")
             Button {
-                appState.plainTextPasteMode.toggle()
+                appState.setPlainTextMode(!appState.plainTextPasteMode)
             } label: {
-                Label(
-                    "纯文本",
-                    systemImage: appState.plainTextPasteMode ? "doc.plaintext.fill" : "doc.plaintext"
-                )
+                Image(systemName: appState.plainTextPasteMode ? "doc.plaintext.fill" : "doc.plaintext")
             }
-            .help("开启后粘贴剥离格式（纯文本）；关闭则保留原格式（默认关闭，T2.6.2 设置页接管）")
+            .help("纯文本粘贴：开启后剥离格式；关闭则保留原格式（默认关闭）")
+            Button {
+                onOpenSettings?()
+            } label: {
+                Image(systemName: "gearshape")
+            }
+            .help("设置")
             Spacer()
             Button {
                 showPermissionGuide.toggle()
             } label: {
-                Label(
-                    "辅助功能",
-                    systemImage: appState.hasAccessibilityPermission ? "checkmark.seal" : "exclamationmark.triangle"
-                )
+                Image(systemName: appState.hasAccessibilityPermission ? "checkmark.seal" : "exclamationmark.triangle")
             }
             .help(appState.hasAccessibilityPermission ? "辅助功能权限已开启" : "辅助功能权限未开启，点击查看引导")
         }

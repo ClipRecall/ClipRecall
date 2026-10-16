@@ -68,6 +68,22 @@ final class ClipCapturePipelineTests: XCTestCase {
         ])
     }
 
+    func testUpdateMaskingAppliesToNextCapture() {
+        let pasteboard = FakeTextPasteboard()
+        pasteboard.setString("1234567890123456", forType: FormatUTI.plainText)
+        let store = RecentClipsStore(limit: 10)
+        let pipeline = makePipeline(pasteboard: pasteboard, store: store)
+
+        // 初始：默认后部 50%
+        pipeline.clipboardDidChange(changeCount: 1)
+        XCTAssertEqual(store.clips[0].textPreview, "12345678********")
+
+        // 运行时更新：前部 50%
+        pipeline.updateMasking(ratio: 0.5, position: .leading)
+        pipeline.clipboardDidChange(changeCount: 2)
+        XCTAssertEqual(store.clips[0].textPreview, "********90123456")
+    }
+
     func testExcludedAppIsSkipped() {
         let pasteboard = FakeTextPasteboard()
         pasteboard.setString("密码内容", forType: FormatUTI.plainText)

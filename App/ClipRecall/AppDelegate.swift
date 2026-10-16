@@ -8,10 +8,8 @@ import ClipRecallCore
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private var popover: NSPopover!
+    private var settingsWindow: NSWindow?
     private let appState = AppState()
-    private let hotkeyManager = HotkeyManager()
-    /// 快捷键设置（T2.6 设置页将读写此结构）
-    private var hotkeySettings: HotkeySettings = .default
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
@@ -26,14 +24,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         popover.contentViewController = NSHostingController(
             rootView: DebugListView(
                 appState: appState,
-                onClose: { [weak self] in self?.closePopover() }
+                onClose: { [weak self] in self?.closePopover() },
+                onOpenSettings: { [weak self] in self?.openSettings() }
             )
         )
 
-        // 全局快捷键：Option+` 呼出/收起面板
-        hotkeyManager.register(hotkeySettings) { [weak self] in
+        // 快捷键回调：呼出/收起面板
+        appState.onHotkeyPressed = { [weak self] in
             self?.togglePopover()
         }
+    }
+
+    /// 打开设置窗口（复用同一个窗口实例）。
+    func openSettings() {
+        if settingsWindow == nil {
+            let window = NSWindow(
+                contentViewController: NSHostingController(rootView: SettingsView(appState: appState))
+            )
+            window.title = "ClipRecall 设置"
+            window.styleMask = [.titled, .closable]
+            settingsWindow = window
+        }
+        settingsWindow?.makeKeyAndOrderFront(nil)
+        NSApp.activate()
     }
 
     @objc private func togglePopover() {

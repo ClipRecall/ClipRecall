@@ -51,6 +51,13 @@ public final class AppExclusionList: @unchecked Sendable {
         return bundleIds
     }
 
+    /// 整体替换名单（设置页保存用）。
+    public func replaceAll(_ newBundleIds: Set<String>) {
+        lock.lock()
+        bundleIds = newBundleIds
+        lock.unlock()
+    }
+
     /// 默认名单：常见密码管理器。
     public static let defaultBundleIds: Set<String> = [
         "com.agilebits.onepassword7",
