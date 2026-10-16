@@ -126,24 +126,46 @@ public final class ClipRepository: ClipStoring, @unchecked Sendable {
     /// （unicode61 分词器对夹标点等场景分词不佳，兜底保证不丢召回）；纯符号查询只走 LIKE。
     /// 只搜索打码后的预览文本——敏感内容完整值不可搜（隐私设计，与 T3.1.1 一致）。
     public func search(_ query: String, limit: Int = 100) throws -> [Clip] {
+        // 关键词接口语义：空关键词返回空（只按过滤器查请走 fetchClips）
+        guard !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return [] }
+        return try fetchClips(query: query, filter: ClipFilter(), limit: limit)
+    }
+
+    /// 组合查询（T3.2.1）：关键词 + 类型 / 来源 / 时间过滤任意组合，一次查询完成。
+    /// 关键词为空时只按过滤器查（搜索框空 + 过滤激活的场景）；空过滤器等价最近列表。
+    public func fetchClips(
+        query: String, filter: ClipFilter = ClipFilter(), limit: Int = 100
+    ) throws -> [Clip] {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return [] }
 
         let pool = try databaseManager.open()
         return try pool.read { db in
-            var ids: [String] = []
-            if trimmed.containsTokenCharacter {
-                ids = try Self.ftsMatch(trimmed, in: db)
+            // 关键词 → id 集合（复用 FTS 短语 + 中文/符号 LIKE 兜底）
+            var keywordIds: Set<String>?
+            if !trimmed.isEmpty {
+                var ids: [String] = []
+                if trimmed.containsTokenCharacter {
+                    ids = try Self.ftsMatch(trimmed, in: db)
+                }
+                if trimmed.containsCJK || !trimmed.containsTokenCharacter {
+                    ids = Array(Set(ids + (try Self.likeMatch(trimmed, in: db))))
+                }
+                keywordIds = Set(ids)
             }
-            // 中文查询：LIKE 兜底并集——unicode61 对夹标点等场景分词不佳时仍能召回；
-            // 纯符号查询：FTS 无法分词（空短语），只走 LIKE
-            if trimmed.containsCJK || !trimmed.containsTokenCharacter {
-                let likeIds = try Self.likeMatch(trimmed, in: db)
-                ids = Array(Set(ids + likeIds))
+            var request = ClipRecord.filter(Column("isDeleted") == false)
+            if let keywordIds {
+                request = request.filter(keywordIds.contains(Column("id")))
             }
-            guard !ids.isEmpty else { return [] }
-            let records = try ClipRecord
-                .filter(ids.contains(Column("id")) && Column("isDeleted") == false)
+            if let types = filter.types, !types.isEmpty {
+                request = request.filter(types.map(\.rawValue).contains(Column("primaryType")))
+            }
+            if let bundleId = filter.sourceAppBundleId {
+                request = request.filter(Column("sourceAppBundleId") == bundleId)
+            }
+            if let cutoff = filter.timeRange?.cutoff() {
+                request = request.filter(Column("capturedAt") >= Self.dateString(cutoff))
+            }
+            let records = try request
                 .order(Column("capturedAt").desc)
                 .limit(limit)
                 .fetchAll(db)
