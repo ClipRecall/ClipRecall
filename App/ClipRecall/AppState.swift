@@ -83,6 +83,8 @@ final class AppState {
             maskingRatio: savedSettings.maskingEnabled ? savedSettings.maskingRatio : 0,
             maskPosition: savedSettings.maskPosition
         )
+        // 增量 OCR 索引队列（启动在 init 末尾，此处仅初始化）
+        ocrQueue = OCRIndexingQueue(repository: repository)
         repository.onAppend = { [weak self] _ in
             guard let self else { return }
             Task { @MainActor in
@@ -124,8 +126,7 @@ final class AppState {
         exclusionList.replaceAll(Set(excludedBundleIds))
 
         reloadClips()
-        // 增量 OCR 索引队列：后台识别历史/新截图文字（断点续传）
-        ocrQueue = OCRIndexingQueue(repository: repository)
+        // 增量 OCR 索引队列启动：后台识别历史/新截图文字（断点续传）
         ocrQueue.start()
         Log.info("AppState 初始化完成，开始监听剪贴板（基线 \(pasteboard.changeCount)）", module: .app)
     }
