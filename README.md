@@ -20,7 +20,11 @@ It is built **local-first**: everything is stored in a local SQLite database, no
   - Sensitive-content masking — card numbers / API keys are masked in the list (ratio and position configurable in the future); the full content is always preserved for recall
   - Pause/resume recording with one click
 - **Persistence** — SQLite-backed history with automatic retention policy (2000 entries / 30 days by default, pinned entries exempt)
-- **Menu bar app** — lightweight UI, image thumbnails, unified type labels, accessibility-permission guide (for the upcoming direct-paste feature)
+- **Menu bar panel & recall** — keyboard-first navigation (arrows to select, Enter to recall, Esc to close), global hotkey, direct paste (Shift+Enter, optional), paste-as-plain-text mode, pin / delete / clear / multi-select merge
+- **Settings window** — retention policy, app exclusion list, masking ratio & position, paste-mode toggles, hotkey recorder, launch at login
+- **Full-text search** — Chinese & English keywords (case-insensitive, partial-word matching) with type / source / time filters
+- **Image OCR** — screenshot text is recognized automatically and becomes searchable (on-device)
+- **Local semantic search** — automatic semantic fallback when keywords miss (offline)
 
 ## Development progress
 
@@ -28,8 +32,8 @@ It is built **local-first**: everything is stored in a local SQLite database, no
 |---|---|
 | Stage 0 — Foundation (project structure, data model, database, security) | ✅ Done |
 | Stage 1 — Local engine (capture, detection, dedup, persistence, privacy) | ✅ Done |
-| Stage 2 — UI & recall (polished panel, keyboard-first, direct paste, hotkey) | 🚧 Planned |
-| Stage 3 — Search (full-text, OCR, semantic) | 🚧 Planned |
+| Stage 2 — UI & recall (polished panel, keyboard-first, direct paste, hotkey) | ✅ Done |
+| Stage 3 — Search (full-text, OCR, semantic) | ✅ Done |
 | Stage 4 — AI (BYOK providers, local models, actions) | 🚧 Planned |
 | Stage 5–6 — Cloud & monetization (E2EE sync, subscriptions, AI credits) | 🚧 Planned |
 | Stage 7 — Release (TestFlight, App Store, polish) | 🚧 Planned |
@@ -38,11 +42,7 @@ See [docs/project-plan.md](docs/project-plan.md) for the detailed task plan and 
 
 ## Roadmap (promised features)
 
-- **UI & interaction** — polished panel, keyboard-first navigation, global hotkey, popup positioning, UI polish & animations
-- **Recall upgrades** — direct paste (Shift+Enter) with an on/off setting, paste-as-plain-text mode, pin/delete/edit entries, multi-select merge
-- **Settings page** — retention policy, exclusion list, hotkey, sensitive-masking options (ratio + front/middle/back position), direct-paste toggle
 - **AI (free tier via BYOK)** — bring your own API key for any OpenAI-compatible provider (OpenAI, DeepSeek, Moonshot, local Ollama/vLLM and more): summarize, translate, polish, explain code
-- **Search upgrades** — full-text search, image OCR, local semantic search
 - **ClipRecall Pro (subscription)** — end-to-end encrypted cloud sync across devices, built-in AI credits, web access
 - **Later** — iOS/iPadOS, Paddle billing, share links, team spaces, self-hosted server
 
