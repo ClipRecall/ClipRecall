@@ -19,8 +19,8 @@ targets:
       properties:
         LSUIElement: true
         LSApplicationCategoryType: public.app-category.productivity
-        CFBundleShortVersionString: "0.3.0"
-        CFBundleVersion: "3"
+        CFBundleShortVersionString: "1.0.0"
+        CFBundleVersion: "4"
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.andromeda.ClipRecall
