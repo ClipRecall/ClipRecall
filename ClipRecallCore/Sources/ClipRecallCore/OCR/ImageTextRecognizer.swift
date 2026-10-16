@@ -3,6 +3,12 @@ import Vision
 
 // MARK: - 图片 OCR（T3.3.1）
 
+/// 识别器协议：真实现 + 测试假实现（T3.3.2 队列注入用）。
+public protocol ImageTextRecognizing: Sendable {
+    /// 识别图片中的文字；识别不出返回空字符串；坏图片 / 不支持格式抛错。
+    func recognizeText(in imageData: Data) throws -> String
+}
+
 /// 图片文字识别：Vision 框架薄封装（纯本地识别，不上传）。
 ///
 /// 识别配置：`.accurate` 质量优先；中英混排（zh-Hans 主、en-US 副）；关闭语言纠正——
@@ -10,7 +16,7 @@ import Vision
 ///
 /// 注意：本接口为**同步阻塞**（Vision 本身同步执行、CPU 密集）——后台调度由
 /// T3.3.2 增量索引队列负责，不要在 MainActor 上直接调用。
-public struct ImageTextRecognizer: Sendable {
+public struct ImageTextRecognizer: ImageTextRecognizing, Sendable {
     public init() {}
 
     /// 识别图片中的文字；识别不出返回空字符串；坏图片 / 不支持格式抛错。

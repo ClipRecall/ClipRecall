@@ -7,6 +7,7 @@ public enum LogModule: String, CaseIterable, Sendable {
     case clipboard
     case storage
     case search
+    case ocr
     case ai
     case sync
     case diagnostics

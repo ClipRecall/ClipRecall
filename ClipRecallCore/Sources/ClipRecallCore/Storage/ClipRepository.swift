@@ -179,6 +179,60 @@ public final class ClipRepository: ClipStoring, @unchecked Sendable {
         }
     }
 
+    // MARK: - OCR 索引（T3.3.2）
+
+    /// 取一条待 OCR 的图片条目 id（最旧优先）：含图片载荷 + ocrText 为 NULL + 未删除。
+    /// 断点续传：识别完成的条目 ocrText 非 NULL，重启后自动跳过。
+    public func nextOCRClipID() throws -> UUID? {
+        let pool = try databaseManager.open()
+        return try pool.read { db in
+            let row = try Row.fetchOne(
+                db,
+                sql: """
+                    SELECT c.id FROM clips c
+                    JOIN formats f ON f.clipId = c.id
+                    WHERE c.isDeleted = 0 AND c.ocrText IS NULL
+                      AND f.type IN ('\(FormatUTI.png)', '\(FormatUTI.tiff)', '\(FormatUTI.jpeg)')
+                    ORDER BY c.capturedAt ASC
+                    LIMIT 1
+                    """
+            )
+            guard let id = row?["id"] as String? else { return nil }
+            return UUID(uuidString: id)
+        }
+    }
+
+    /// 读取条目的图片载荷字节（inline 优先，其次文件引用）；无图片格式返回 nil。
+    public func imagePayloadData(clipId: UUID) throws -> Data? {
+        let pool = try databaseManager.open()
+        let records: [FormatRecord] = try pool.read { db in
+            try FormatRecord
+                .filter(Column("clipId") == clipId.uuidString)
+                .filter([FormatUTI.png, FormatUTI.tiff, FormatUTI.jpeg].contains(Column("type")))
+                .fetchAll(db)
+        }
+        if let inline = records.first(where: { $0.payloadKind == "inline" })?.payloadInline {
+            return inline
+        }
+        for record in records where record.payloadKind == "file" {
+            if let path = record.payloadPath, let data = try? blobManager.read(relativePath: path) {
+                return data
+            }
+        }
+        return nil
+    }
+
+    /// 记录 OCR 结果（空字符串 = 识别完成但无文字/失败，同样标记完成避免重复处理）。
+    public func setOCRText(clipId: UUID, _ text: String) throws {
+        let pool = try databaseManager.open()
+        try pool.write { db in
+            try db.execute(
+                sql: "UPDATE clips SET ocrText = ? WHERE id = ?",
+                arguments: [text, clipId.uuidString]
+            )
+        }
+    }
+
     /// 历史中出现过的来源 App（T3.2.2 过滤栏数据源）：去重、排除软删除、按名称排序。
     public func fetchSourceApps() throws -> [(bundleId: String, name: String)] {
         let pool = try databaseManager.open()

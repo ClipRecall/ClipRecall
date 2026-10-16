@@ -52,5 +52,6 @@ public enum FormatUTI {
     public static let rtf = "public.rtf"
     public static let png = "public.png"
     public static let tiff = "public.tiff"
+    public static let jpeg = "public.jpeg"
     public static let fileURL = "public.file-url"
 }

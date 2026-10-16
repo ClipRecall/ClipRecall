@@ -204,7 +204,7 @@
 | # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
 | T3.3.1 | [x] | Vision wrapper | Chinese + English recognition requests | TC3.3 |
-| T3.3.2 | [ ] | Incremental index queue | background queue + resume | TC3.3 |
+| T3.3.2 | [x] | Incremental index queue | background queue + resume | TC3.3 |
 | T3.3.3 | [ ] | OCR text into index | results written into FTS5 | TC3.3 |
 
 ### T3.4 Local semantic search

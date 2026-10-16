@@ -53,6 +53,7 @@ final class AppState {
     private let exclusionList = AppExclusionList(defaults: [])
     private let hotkeyManager = HotkeyManager()
     private let directPastePerformer = DirectPastePerformer()
+    private let ocrQueue: OCRIndexingQueue
 
     /// 快捷键触发回调（AppDelegate 注入：切换面板）
     var onHotkeyPressed: (() -> Void)?
@@ -123,6 +124,9 @@ final class AppState {
         exclusionList.replaceAll(Set(excludedBundleIds))
 
         reloadClips()
+        // 增量 OCR 索引队列：后台识别历史/新截图文字（断点续传）
+        ocrQueue = OCRIndexingQueue(repository: repository)
+        ocrQueue.start()
         Log.info("AppState 初始化完成，开始监听剪贴板（基线 \(pasteboard.changeCount)）", module: .app)
     }
 

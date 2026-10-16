@@ -15,6 +15,13 @@ public enum DatabaseMigrations {
         migrator.registerMigration("v3_createFTS") { db in
             try createFTSTable(db)
         }
+        migrator.registerMigration("v4_addOCRText") { db in
+            // OCR 识别文本（T3.3.2）：NULL = 尚未识别；空字符串 = 识别过但无文字/识别失败。
+            // 断点续传由该列表达——重启后 NULL 的条目自动续处理。
+            try db.alter(table: "clips") { t in
+                t.add(column: "ocrText", .text)
+            }
+        }
     }
 
     /// 全文搜索索引（T3.1.1）：clipId 只做关联键不参与分词，text 为可搜索文本。
