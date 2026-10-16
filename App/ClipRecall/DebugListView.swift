@@ -14,6 +14,7 @@ struct DebugListView: View {
     @State private var multiSelected: [UUID] = []   // 多选（按选择顺序）
     @State private var pendingDelete: Clip?
     @State private var showClearAllAlert = false
+    @State private var showQuitAlert = false
     @FocusState private var isListFocused: Bool
 
     var body: some View {
@@ -133,9 +134,17 @@ struct DebugListView: View {
         } message: {
             Text("将删除全部 \(appState.clips.count) 条历史，此操作不可撤销。")
         }
+        .alert("确认退出 ClipRecall？", isPresented: $showQuitAlert) {
+            Button("退出", role: .destructive) {
+                NSApp.terminate(nil)
+            }
+            Button("取消", role: .cancel) {}
+        } message: {
+            Text("退出后将停止记录剪贴板历史。")
+        }
     }
 
-    /// 底部栏：条目计数 + 清空按钮。
+    /// 底部栏：条目计数 + 清空 + 退出。
     private var footer: some View {
         HStack {
             Text("\(appState.clips.count) 条")
@@ -147,6 +156,10 @@ struct DebugListView: View {
             }
             .buttonStyle(.plain)
             .foregroundStyle(.red)
+            Button("退出") {
+                showQuitAlert = true
+            }
+            .buttonStyle(.plain)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
