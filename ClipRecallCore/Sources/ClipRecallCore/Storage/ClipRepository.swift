@@ -139,6 +139,8 @@ public final class ClipRepository: ClipStoring, @unchecked Sendable {
                 sql: "UPDATE clips SET isDeleted = 1, updatedAt = ? WHERE id = ?",
                 arguments: [Self.dateString(Date()), id.uuidString]
             )
+            // 软删除条目同样退出搜索索引
+            try db.execute(sql: "DELETE FROM fts WHERE clipId = ?", arguments: [id.uuidString])
         }
     }
 
@@ -161,6 +163,11 @@ public final class ClipRepository: ClipStoring, @unchecked Sendable {
         for format in clip.formats {
             try insertFormat(format, clipId: clip.id.uuidString, in: db)
         }
+        // 全文搜索索引（T3.1.1）：只索引打码后的预览文本，敏感内容完整值不可被搜索
+        try db.execute(
+            sql: "INSERT INTO fts (clipId, text) VALUES (?, ?)",
+            arguments: [clip.id.uuidString, clip.textPreview ?? ""]
+        )
     }
 
     private func insertFormat(_ format: Format, clipId: String, in db: Database) throws {
@@ -188,6 +195,8 @@ public final class ClipRepository: ClipStoring, @unchecked Sendable {
     private func deleteClipRows(id: String, in db: Database) throws {
         try db.execute(sql: "DELETE FROM formats WHERE clipId = ?", arguments: [id])
         try db.execute(sql: "DELETE FROM clips WHERE id = ?", arguments: [id])
+        // 同步清理搜索索引（覆盖去重替换 / 合并替换 / 更新 / 保留清理 / 清空全部）
+        try db.execute(sql: "DELETE FROM fts WHERE clipId = ?", arguments: [id])
     }
 
     /// 主动执行一次保留策略（App 启动时调用；save 内部也会自动执行）。

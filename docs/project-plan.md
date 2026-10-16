@@ -188,7 +188,7 @@
 
 | # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
-| T3.1.1 | [ ] | FTS5 table & writes | virtual table + synchronized writes | TC3.1 |
+| T3.1.1 | [x] | FTS5 table & writes | virtual table + synchronized writes | TC3.1 |
 | T3.1.2 | [ ] | Query API | phrase matching + LIKE fallback (Chinese) | TC3.1 |
 | T3.1.3 | [ ] | Index rebuild | full rebuild command | TC3.1 |
 

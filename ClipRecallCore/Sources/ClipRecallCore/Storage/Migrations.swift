@@ -12,6 +12,17 @@ public enum DatabaseMigrations {
         migrator.registerMigration("v2_createSettings") { db in
             try createSettingsTable(db)
         }
+        migrator.registerMigration("v3_createFTS") { db in
+            try createFTSTable(db)
+        }
+    }
+
+    /// 全文搜索索引（T3.1.1）：clipId 只做关联键不参与分词，text 为可搜索文本。
+    private static func createFTSTable(_ db: Database) throws {
+        try db.create(virtualTable: "fts", using: FTS5()) { t in
+            t.column("clipId").notIndexed()
+            t.column("text")
+        }
     }
 
     private static func createSettingsTable(_ db: Database) throws {
