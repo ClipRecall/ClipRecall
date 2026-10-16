@@ -122,6 +122,63 @@ public final class ClipRepository: ClipStoring, @unchecked Sendable {
         }
     }
 
+    /// 全文搜索（T3.1.2）：FTS5 短语匹配；中文查询附加 LIKE 子串并集兜底
+    /// （unicode61 分词器对夹标点等场景分词不佳，兜底保证不丢召回）；纯符号查询只走 LIKE。
+    /// 只搜索打码后的预览文本——敏感内容完整值不可搜（隐私设计，与 T3.1.1 一致）。
+    public func search(_ query: String, limit: Int = 100) throws -> [Clip] {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return [] }
+
+        let pool = try databaseManager.open()
+        return try pool.read { db in
+            var ids: [String] = []
+            if trimmed.containsTokenCharacter {
+                ids = try Self.ftsMatch(trimmed, in: db)
+            }
+            // 中文查询：LIKE 兜底并集——unicode61 对夹标点等场景分词不佳时仍能召回；
+            // 纯符号查询：FTS 无法分词（空短语），只走 LIKE
+            if trimmed.containsCJK || !trimmed.containsTokenCharacter {
+                let likeIds = try Self.likeMatch(trimmed, in: db)
+                ids = Array(Set(ids + likeIds))
+            }
+            guard !ids.isEmpty else { return [] }
+            let records = try ClipRecord
+                .filter(ids.contains(Column("id")) && Column("isDeleted") == false)
+                .order(Column("capturedAt").desc)
+                .limit(limit)
+                .fetchAll(db)
+            let finalIds = records.map(\.id)
+            let formatRecords = try FormatRecord
+                .filter(finalIds.contains(Column("clipId")))
+                .fetchAll(db)
+            let formatsByClip = Dictionary(grouping: formatRecords, by: \.clipId)
+            return records.compactMap { record in
+                Self.makeClip(record: record, formats: formatsByClip[record.id] ?? [])
+            }
+        }
+    }
+
+    /// FTS 短语匹配：整体包成短语并转义内部引号，避免用户输入触发 FTS 查询语法。
+    private static func ftsMatch(_ query: String, in db: Database) throws -> [String] {
+        let escaped = query.replacingOccurrences(of: "\"", with: "\"\"")
+        return try String.fetchAll(
+            db, sql: "SELECT clipId FROM fts WHERE fts MATCH ?", arguments: ["\"\(escaped)\""]
+        )
+    }
+
+    /// LIKE 兜底（中文）：转义通配符后做子串匹配，仅在 textPreview 上扫描。
+    private static func likeMatch(_ query: String, in db: Database) throws -> [String] {
+        let escaped = query
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "%", with: "\\%")
+            .replacingOccurrences(of: "_", with: "\\_")
+        return try String.fetchAll(
+            db,
+            sql: "SELECT id FROM clips WHERE textPreview LIKE ? ESCAPE '\\' AND isDeleted = 0",
+            arguments: ["%\(escaped)%"]
+        )
+    }
+
     /// 更新条目（按 id，整体替换）。
     public func update(_ clip: Clip) throws {
         let pool = try databaseManager.open()
@@ -378,5 +435,30 @@ public final class ClipRepository: ClipStoring, @unchecked Sendable {
         let callback = appendCallback
         lock.unlock()
         callback?(clip)
+    }
+}
+
+private extension String {
+    /// CJK 字符区段（扩展 A / 统一表意文字 / 兼容表意文字）。
+    static let cjkRanges: [ClosedRange<UInt32>] = [
+        0x3400...0x4DBF, 0x4E00...0x9FFF, 0xF900...0xFAFF,
+    ]
+
+    /// 是否包含 CJK 字符（搜索含中文时启用 LIKE 兜底）。
+    var containsCJK: Bool {
+        unicodeScalars.contains { scalar in
+            Self.cjkRanges.contains { $0.contains(scalar.value) }
+        }
+    }
+
+    /// 是否含可分词字符（字母 / 十进制数字 / CJK）。纯符号查询无法走 FTS（空短语），转 LIKE。
+    /// 注意：不能用 CharacterSet.alphanumerics——它会误判 ①② 等带圈数字为可分词字符。
+    var containsTokenCharacter: Bool {
+        unicodeScalars.contains { scalar in
+            let properties = scalar.properties
+            return properties.isAlphabetic
+                || properties.generalCategory == .decimalNumber
+                || containsCJK
+        }
     }
 }
