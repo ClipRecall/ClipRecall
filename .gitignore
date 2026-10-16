@@ -26,3 +26,4 @@ closed/
 
 # claude code export
 .cc-history
+.build-release/
