@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- ClipRecall menu bar icon: clipboard + recall back-arrow (monochrome template) -->
+  <!-- clipboard body -->
+  <rect x="8.5" y="10" width="15" height="18" rx="2.6" fill="none" stroke="#000000" stroke-width="2"/>
+  <!-- top clip -->
+  <rect x="12" y="6.6" width="8" height="4.2" rx="1.7" fill="#000000"/>
+  <!-- recall back-arrow (filled, pointing left, tail looping right) -->
+  <path d="M10.8 18 L15.8 14.6 L15.8 17.4 L20.6 17.4 C21.15 17.4 21.6 17.85 21.6 18.4 L21.6 19.6 C21.6 20.15 21.15 20.6 20.6 20.6 L15.8 20.6 L15.8 21.4 Z" fill="#000000"/>
+</svg>

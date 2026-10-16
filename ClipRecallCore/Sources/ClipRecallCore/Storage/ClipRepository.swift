@@ -82,6 +82,16 @@ public final class ClipRepository: ClipStoring, @unchecked Sendable {
         try fetchRecent(limit: limit)
     }
 
+    /// 调试用批量插入：绕过合并/去重/清理策略，直接落库（性能测试用；正式版发布前移除，见 T7.5）。
+    public func bulkInsertForTesting(_ clips: [Clip]) throws {
+        let pool = try databaseManager.open()
+        try pool.write { db in
+            for clip in clips {
+                try insertClip(clip, in: db)
+            }
+        }
+    }
+
     /// 保存条目（含全部格式）；执行分片合并与全局去重（最近 200 条范围内）。
     public func save(_ clip: Clip) throws {
         let pool = try databaseManager.open()
@@ -178,6 +188,29 @@ public final class ClipRepository: ClipStoring, @unchecked Sendable {
     private func deleteClipRows(id: String, in db: Database) throws {
         try db.execute(sql: "DELETE FROM formats WHERE clipId = ?", arguments: [id])
         try db.execute(sql: "DELETE FROM clips WHERE id = ?", arguments: [id])
+    }
+
+    /// 主动执行一次保留策略（App 启动时调用；save 内部也会自动执行）。
+    public func enforceRetentionPolicy() throws {
+        try cleanupIfNeeded()
+    }
+
+    /// 清空全部历史（硬删除，含落盘文件）；返回删除的条数。
+    public func clearAll() throws -> Int {
+        let pool = try databaseManager.open()
+        var deletedPaths: [String] = []
+        let count: Int = try pool.write { db in
+            let rows = try ClipRecord.fetchAll(db)
+            deletedPaths += try Self.collectBlobPaths(clipIds: rows.map(\.id), in: db)
+            for row in rows {
+                try deleteClipRows(id: row.id, in: db)
+            }
+            return rows.count
+        }
+        for path in deletedPaths {
+            try? blobManager.delete(relativePath: path)
+        }
+        return count
     }
 
     /// 保存后自动执行保留策略（Pin 豁免；落盘文件一并删除，防孤儿文件）。

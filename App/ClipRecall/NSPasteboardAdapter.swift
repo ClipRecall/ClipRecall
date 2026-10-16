@@ -21,6 +21,8 @@ struct NSPasteboardAdapter: PasteboardReading, PasteboardWriting, @unchecked Sen
         pasteboard.string(forType: NSPasteboard.PasteboardType(type))
     }
 
+    /// 写入顺序约定：纯文本第一（接收方 App 优先取纯文本），随后 HTML / RTF、图片、文件。
+    /// 文本类（纯文本 / 文件清单）用字符串写入，其余按原始数据。
     func write(_ items: [PasteboardWriteItem]) {
         pasteboard.clearContents()
         let allTypes = items.map { NSPasteboard.PasteboardType($0.type) }

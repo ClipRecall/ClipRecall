@@ -136,49 +136,49 @@
 
 | # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
-| T2.1.1 | [ ] | MenuBarExtra entry | icon + click to open | TC2.1 |
-| T2.1.2 | [ ] | List rendering | List virtualization + scroll performance | TC2.1 |
-| T2.1.3 | [ ] | Entry row views ×6 | text / image / file / URL / code / color rows | TC2.1 |
+| T2.1.1 | [x] | MenuBarExtra entry | icon + click to open | TC2.1 |
+| T2.1.2 | [x] | List rendering | List virtualization + scroll performance | TC2.1 |
+| T2.1.3 | [x] | Entry row views ×6 | text / image / file / URL / code / color rows | TC2.1 |
 
 ### T2.2 Keyboard interaction
 
 | # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
-| T2.2.1 | [ ] | Focus management | keyboard focus without stealing the frontmost app's | TC2.2 |
-| T2.2.2 | [ ] | Enter-to-copy & Esc | select → copy → close flow | TC2.2 |
+| T2.2.1 | [x] | Focus management | keyboard focus without stealing the frontmost app's | TC2.2 |
+| T2.2.2 | [x] | Enter-to-copy & Esc | select → copy → close flow | TC2.2 |
 
 ### T2.3 Recall & paste
 
 | # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
-| T2.3.1 | [ ] | Pasteboard write-back | multi-format NSPasteboard write | TC2.3 |
-| T2.3.2 | [ ] | Direct paste | AX frontmost-app + CGEvent Cmd+V | TC2.3 |
-| T2.3.3 | [ ] | Plain-text paste mode | format-stripping write | TC2.3 |
+| T2.3.1 | [x] | Pasteboard write-back | multi-format NSPasteboard write | TC2.3 |
+| T2.3.2 | [x] | Direct paste | AX frontmost-app + CGEvent Cmd+V | TC2.3 |
+| T2.3.3 | [x] | Plain-text paste mode | format-stripping write | TC2.3 |
 
 ### T2.4 Entry management
 
 | # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
-| T2.4.1 | [ ] | Pin / delete | actions + confirmation UI | TC2.4 |
-| T2.4.2 | [ ] | Edit then copy | editor + overwrite write-back | TC2.4 |
-| T2.4.3 | [ ] | Multi-select merge | multi-select + concatenated copy | TC2.4 |
+| T2.4.1 | [x] | Pin / delete | actions + confirmation UI | TC2.4 |
+| T2.4.2 | ~~[ ]~~ | ~~Edit then copy~~ | **Cancelled 2026-10-16** — user judged it low-value/high-complexity; removed from scope | — |
+| T2.4.3 | [x] | Multi-select merge | multi-select + concatenated copy | TC2.4 |
 
 ### T2.5 Global hotkey
 
 | # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
-| T2.5.1 | [ ] | Hotkey registration | Carbon hotkey wrapper | TC2.5 |
-| T2.5.2 | [ ] | Configuration & conflict detection | settings-page rebinding + conflict hints | TC2.5 |
+| T2.5.1 | [x] | Hotkey registration | Carbon hotkey wrapper | TC2.5 |
+| T2.5.2 | [ ] | Configuration & conflict detection | settings-page rebinding + conflict hints | TC2.5 |（rebinding done in T2.6.2; conflict-detection hints deferred）
 
 ### T2.6 Settings page
 
 | # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
 | T2.6.1 | [ ] | Settings storage | settings table + read/write | — |
-| T2.6.2 | [ ] | Settings UI | retention / exclusion list / hotkey groups | TC2.6 |
-| T2.6.3 | [ ] | Launch at login | SMAppService registration | TC2.6 |
+| T2.6.2 | [x] | Settings UI | retention / exclusion list / hotkey groups | TC2.6 |
+| T2.6.3 | [x] | Launch at login | SMAppService registration | TC2.6 |
 
-> **T2.6.2 settings detail (do not forget)**: ① retention policy (count / days; reads & writes T1.6.3's RetentionPolicy); ② app exclusion list (reads & writes T1.7.1's AppExclusionList — the default password-manager list is editable here); ③ global hotkey; ④ sensitive-content masking (on/off + maskingRatio + front/middle/back maskPosition; reads & writes T1.7.2); ⑤ **direct-paste toggle (requested by the user on 2026-10-15): ON = clicking an entry pastes directly into the frontmost app; OFF = content goes to the clipboard and the user presses Cmd+V themselves (branches into T2.3.2 / T2.3.1)**; ⑥ when this page is done, remind the user to back-test the three TC1.6 items (limit 100 entries / keep 7 days / pinned exemption).
+> **T2.6.2 settings detail (do not forget)**: ① retention policy (count / days; reads & writes T1.6.3's RetentionPolicy); ② app exclusion list (reads & writes T1.7.1's AppExclusionList — the default password-manager list is editable here); ③ global hotkey; ④ sensitive-content masking (on/off + maskingRatio + front/middle/back maskPosition; reads & writes T1.7.2); ⑤ **direct-paste toggle (requested by the user on 2026-10-15): ON = clicking/Enter pastes directly into the frontmost app; OFF (default) = content goes to the clipboard, the panel auto-closes and the user presses Cmd+V themselves (branches into T2.3.2 / T2.3.1)**; ⑥ when this page is done, remind the user to back-test the three TC1.6 items (limit 100 entries / keep 7 days / pinned exemption).
 
 ## 5. Stage 3: Search (M2)
 

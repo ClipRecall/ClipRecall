@@ -67,10 +67,10 @@
 - [x] Copy the same content 3 times → only one entry in the list
 - [x] Copy a large text from a web page (system-chunked copy) → merged into one complete entry (hard to reproduce manually; guarded by 5 unit tests)
 
-### TC1.6 Storage & retention (T1.6; verify after the settings page T2.6.2)
-- [ ] Set a limit of 100 entries → oldest entries are cleaned beyond the limit
-- [ ] Set 7-day retention → entries older than 8 days are cleaned
-- [ ] Pinned entries are exempt from retention cleanup
+### TC1.6 Storage & retention (T1.6; verified after the settings page T2.6.2)
+- [x] Set a limit of 100 entries → oldest entries are cleaned beyond the limit
+- [x] Set 7-day retention → entries older than 8 days are cleaned (verified with a small day value)
+- [x] Pinned entries are exempt from retention cleanup
 
 ### TC1.7 Privacy filtering (T1.7)
 - [x] Copying a password in 1Password → never appears in the list (default exclusion list; verified in practice by temporarily adding TextEdit to the list)
@@ -85,43 +85,44 @@
 ## Stage 2: UI & Recall
 
 ### TC2.1 Panel & rendering (T2.1)
-- [ ] Clicking the menu bar icon opens the panel
-- [ ] Text / image / file / URL / code / color entries all render correctly
-- [ ] Scrolling 5000 entries stays smooth (list virtualization; temporarily raise the retention cap to 5000 first)
+- [x] Clicking the menu bar icon opens the panel
+- [x] Text / image / file / URL / code / color entries all render correctly (per-type file icons included)
+- [x] Scrolling 5000 entries stays smooth (list virtualization; verified via the "Test data" debug button, auto-cleaned on restart)
 
 ### TC2.2 Keyboard interaction (T2.2)
-- [ ] Full keyboard flow: open → arrow-select → Enter to copy → Esc to close
+- [x] Full keyboard flow: open → arrow-select → Enter to copy → Esc to close (hover highlight + click-copy-close also verified)
 - [ ] Shift+Enter pastes directly into the frontmost app and closes the panel
-- [ ] The panel never steals focus from the frontmost app; focus returns correctly after Esc
+- [x] The panel never steals focus from the frontmost app; focus returns correctly after Esc (launcher model A: keyboard goes to the panel while open, Esc restores — per user decision)
 
-### TC2.3 Paste compatibility matrix (core test, go app by app)
+### TC2.3 Paste compatibility matrix (core test, go app by app) ✅
 
 | App | Original-format paste | Plain-text paste |
 |---|---|---|
-| Notes / Pages | ☐ | ☐ |
-| Terminal | ☐ | ☐ |
-| VS Code | ☐ | ☐ |
-| WeChat / Feishu | ☐ | ☐ |
-| Safari address bar | ☐ | ☐ |
+| Notes / Pages | ☑ | ☑ |
+| Terminal | ☑ | ☑ |
+| VS Code | ☑ | ☑ |
+| WeChat / Feishu | ☑ | ☑ |
+| Safari address bar | ☑ | ☑ |
 
 **Paste modes (T2.3.3)**
-- [ ] Plain-text mode: formatted web text pastes into Notes without formatting pollution
-- [ ] Original-format mode: pasting into a rich-text editor preserves formatting (pairs with TC1.2)
+- [x] Plain-text mode: formatted web text pastes into Notes without formatting pollution
+- [x] Original-format mode: pasting into a rich-text editor preserves formatting (pairs with TC1.2)
 
 ### TC2.4 Entry management (T2.4)
-- [ ] Pinned entries survive app restarts
-- [ ] Delete asks for confirmation; batch delete works
-- [ ] Editing an entry then copying yields the edited version
-- [ ] Multi-select 3 entries and merge-copy → pastes as one continuous content
+- [ ] Pinned entries are exempt from retention cleanup (with persistence, restart survival no longer distinguishes pinned entries; verify after the settings page T2.6.2)
+- [x] Delete asks for confirmation (batch delete not yet implemented)
+- [x] Clear-all button works with confirmation
+- ~~[ ] Editing an entry then copying yields the edited version~~（Cancelled 2026-10-16 — low value/high complexity）
+- [x] Multi-select 3 entries and merge-copy → pastes as one continuous content (selection order preserved; Esc exits multi-select first)
 
 ### TC2.5 Global hotkey (T2.5)
-- [ ] Custom hotkey takes effect after rebinding
+- [x] Custom hotkey takes effect after rebinding (verified via the settings recorder)
 - [ ] Conflicts with system / common app shortcuts produce a hint
 - [ ] The hotkey works in fullscreen apps and games
 
 ### TC2.6 Settings & launch (T2.6)
-- [ ] Launch at login (SMAppService) works; the app auto-starts after reboot
-- [ ] All settings apply immediately or clearly prompt for a restart
+- [x] Launch at login (SMAppService) works; the app auto-starts after reboot（dev builds may be rolled back by the system; full verification after proper signing in Stage 7）
+- [x] All settings apply immediately or clearly prompt for a restart
 
 ## Stage 3: Search
 

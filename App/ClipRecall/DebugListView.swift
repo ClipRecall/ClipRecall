@@ -2,11 +2,20 @@ import AppKit
 import SwiftUI
 import ClipRecallCore
 
-/// 调试列表：显示最近采集的条目，点击复制回剪贴板。
+/// 面板：头部（暂停/辅助功能）+ 条目列表（行渲染见 ClipRowView）。
 struct DebugListView: View {
     let appState: AppState
-
+    /// 关闭面板的回调（Esc / 点击外部由容器处理）
+    var onClose: (() -> Void)? = nil
+    /// 打开设置窗口的回调
+    var onOpenSettings: (() -> Void)? = nil
     @State private var showPermissionGuide = false
+    @State private var selectedIndex: Int = 0
+    @State private var multiSelected: [UUID] = []   // 多选（按选择顺序）
+    @State private var pendingDelete: Clip?
+    @State private var showClearAllAlert = false
+    @State private var showQuitAlert = false
+    @FocusState private var isListFocused: Bool
 
     var body: some View {
         VStack(spacing: 0) {
@@ -28,48 +37,203 @@ struct DebugListView: View {
                     }
                     .frame(width: 300, height: 150)
                 } else {
-                    ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 0) {
-                            ForEach(appState.clips) { clip in
-                                Button {
-                                    appState.copyBack(clip)
-                                } label: {
-                                    row(for: clip)
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            LazyVStack(alignment: .leading, spacing: 0) {
+                                ForEach(Array(appState.clips.enumerated()), id: \.element.id) { index, clip in
+                                    ClipRowView(
+                                        clip: clip,
+                                        appState: appState,
+                                        onCopy: { handleRowClick($0) },
+                                        onTogglePin: { appState.togglePin($0) },
+                                        onDelete: { pendingDelete = $0 }
+                                    )
+                                    .id(clip.id)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 6)
+                                            .fill(Color.accentColor.opacity(selectedIndex == index ? 0.16 : 0))
+                                    )
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 6)
+                                            .stroke(Color.accentColor, lineWidth: 1.5)
+                                            .opacity(multiSelected.contains(clip.id) ? 1 : 0)
+                                    )
+                                    .onHover { hovering in
+                                        if hovering { selectedIndex = index }
+                                    }
                                 }
-                                .buttonStyle(.plain)
                             }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
                         }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
+                        .frame(width: 320, height: 400)
+                        .focusable(true)
+                        .focused($isListFocused)
+                        .focusEffectDisabled()
+                        .onMoveCommand { direction in
+                            guard !appState.clips.isEmpty else { return }
+                            switch direction {
+                            case .up:
+                                selectedIndex = max(0, selectedIndex - 1)
+                            case .down:
+                                selectedIndex = min(appState.clips.count - 1, selectedIndex + 1)
+                            default:
+                                return
+                            }
+                            proxy.scrollTo(appState.clips[selectedIndex].id)
+                        }
+                        .onKeyPress(.return) {
+                            if !multiSelected.isEmpty {
+                                mergeSelectedAndClose()
+                                return .handled
+                            }
+                            guard appState.clips.indices.contains(selectedIndex) else { return .ignored }
+                            copyAndClose(appState.clips[selectedIndex])
+                            return .handled
+                        }
                     }
-                    .frame(width: 320, height: 400)
                 }
             }
+            footer
         }
         .padding(.vertical, 4)
+        .onAppear {
+            isListFocused = true
+        }
+        .onExitCommand {
+            if !multiSelected.isEmpty {
+                multiSelected.removeAll()   // Esc 先退出多选
+            } else {
+                onClose?()
+            }
+        }
+        .alert(
+            "删除该条目？",
+            isPresented: Binding(
+                get: { pendingDelete != nil },
+                set: { if !$0 { pendingDelete = nil } }
+            )
+        ) {
+            Button("删除", role: .destructive) {
+                if let clip = pendingDelete {
+                    appState.deleteClip(clip)
+                    pendingDelete = nil
+                }
+            }
+            Button("取消", role: .cancel) {
+                pendingDelete = nil
+            }
+        } message: {
+            Text(pendingDelete.map { "「\($0.textPreview ?? "")」删除后不可恢复。" } ?? "")
+        }
+        .alert("清空全部历史？", isPresented: $showClearAllAlert) {
+            Button("清空", role: .destructive) {
+                appState.clearAllHistory()
+            }
+            Button("取消", role: .cancel) {}
+        } message: {
+            Text("将删除全部 \(appState.clips.count) 条历史，此操作不可撤销。")
+        }
+        .alert("确认退出 ClipRecall？", isPresented: $showQuitAlert) {
+            Button("退出", role: .destructive) {
+                NSApp.terminate(nil)
+            }
+            Button("取消", role: .cancel) {}
+        } message: {
+            Text("退出后将停止记录剪贴板历史。")
+        }
+    }
+
+    /// 底部栏：条目计数 + 清空 + 退出。
+    private var footer: some View {
+        HStack {
+            Text("\(appState.clips.count) 条")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Spacer()
+            Button("清空") {
+                showClearAllAlert = true
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.red)
+            Button("退出") {
+                showQuitAlert = true
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
     }
 
     private var header: some View {
-        HStack {
+        HStack(spacing: 10) {
             Button(action: appState.togglePause) {
-                Label(
-                    appState.isPaused ? "恢复记录" : "暂停记录",
-                    systemImage: appState.isPaused ? "play.circle" : "pause.circle"
-                )
+                Image(systemName: appState.isPaused ? "play.circle" : "pause.circle")
             }
+            .help(appState.isPaused ? "恢复记录" : "暂停记录")
+            Button {
+                appState.setDirectPaste(!appState.directPasteEnabled)
+            } label: {
+                Image(systemName: appState.directPasteEnabled ? "arrow.uturn.right.circle.fill" : "arrow.uturn.right.circle")
+            }
+            .help("直接粘贴：开启后点击/回车自动粘贴到之前的 App；关闭则进剪贴板手动 Cmd+V（默认关闭）")
+            Button {
+                appState.setPlainTextMode(!appState.plainTextPasteMode)
+            } label: {
+                Image(systemName: appState.plainTextPasteMode ? "doc.plaintext.fill" : "doc.plaintext")
+            }
+            .help("纯文本粘贴：开启后剥离格式；关闭则保留原格式（默认关闭）")
+            Button {
+                onOpenSettings?()
+            } label: {
+                Image(systemName: "gearshape")
+            }
+            .help("设置")
             Spacer()
             Button {
                 showPermissionGuide.toggle()
             } label: {
-                Label(
-                    "辅助功能",
-                    systemImage: appState.hasAccessibilityPermission ? "checkmark.seal" : "exclamationmark.triangle"
-                )
+                Image(systemName: appState.hasAccessibilityPermission ? "checkmark.seal" : "exclamationmark.triangle")
             }
             .help(appState.hasAccessibilityPermission ? "辅助功能权限已开启" : "辅助功能权限未开启，点击查看引导")
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
+    }
+
+    /// 复制选中条目并自动关闭面板（默认行为：进剪贴板、用户手动 Cmd+V；自动粘贴开关见 T2.6.2 明细 ⑤）。
+    private func copyAndClose(_ clip: Clip) {
+        appState.copyBack(clip)
+        onClose?()   // 先关面板释放激活，再执行直接粘贴（若开关开启）
+        appState.performDirectPasteIfEnabled()
+    }
+
+    /// 行点击：⌘点击 = 切换多选；普通点击 = 单条复制（并清空多选）。
+    private func handleRowClick(_ clip: Clip) {
+        if NSEvent.modifierFlags.contains(.command) {
+            toggleMultiSelect(clip)
+        } else {
+            multiSelected.removeAll()
+            copyAndClose(clip)
+        }
+    }
+
+    private func toggleMultiSelect(_ clip: Clip) {
+        if let index = multiSelected.firstIndex(of: clip.id) {
+            multiSelected.remove(at: index)
+        } else {
+            multiSelected.append(clip.id)
+        }
+    }
+
+    /// 按选择顺序合并复制多选项并关闭面板。
+    private func mergeSelectedAndClose() {
+        let clips = multiSelected.compactMap { id in
+            appState.clips.first { $0.id == id }
+        }
+        multiSelected.removeAll()
+        appState.mergeAndCopy(clips)
+        onClose?()
     }
 
     /// 仅未授权时显示的引导卡（授权后自动消失）。
@@ -91,180 +255,5 @@ struct DebugListView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 12)
         .padding(.bottom, 8)
-    }
-
-    private func row(for clip: Clip) -> some View {
-        HStack(spacing: 8) {
-            leadingIcon(for: clip)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(previewText(for: clip))
-                    .lineLimit(clip.primaryType == .url ? nil : 1)
-                Text(captionText(for: clip))
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-            }
-        }
-        .padding(.vertical, 2)
-    }
-
-    @ViewBuilder
-    private func leadingIcon(for clip: Clip) -> some View {
-        if clip.formats.first(where: { $0.type == FormatUTI.plainText })?.metadata.sensitiveKind != nil {
-            Image(systemName: "eye.slash")
-                .foregroundStyle(.secondary)
-                .frame(width: 18)
-        } else if clip.primaryType == .color,
-           let preview = clip.textPreview,
-           let info = ColorDetection.detect(in: preview) {
-            Circle()
-                .fill(
-                    Color(
-                        red: Double(info.red) / 255,
-                        green: Double(info.green) / 255,
-                        blue: Double(info.blue) / 255
-                    )
-                )
-                .frame(width: 16, height: 16)
-                .overlay(Circle().stroke(.secondary.opacity(0.3), lineWidth: 1))
-        } else if clip.primaryType == .image {
-            ThumbnailView(clip: clip, appState: appState)
-        } else if clip.primaryType == .url,
-                  let preview = clip.textPreview,
-                  let info = URLDetection.detect(in: preview) {
-            FaviconView(domain: info.domain, fetcher: appState.faviconFetcher)
-        } else {
-            Image(systemName: iconName(for: clip.primaryType))
-                .foregroundStyle(.secondary)
-                .frame(width: 18)
-        }
-    }
-
-    /// 统一的"类型 · 时间"角标。
-    private func captionText(for clip: Clip) -> String {
-        let time = clip.capturedAt.formatted(date: .omitted, time: .shortened)
-        let label: String
-        switch clip.primaryType {
-        case .code:
-            if let plain = clip.formats.first(where: { $0.type == FormatUTI.plainText }),
-               let language = plain.metadata.codeLanguage {
-                label = language
-            } else {
-                label = "代码"
-            }
-        case .text:
-            if let plain = clip.formats.first(where: { $0.type == FormatUTI.plainText }),
-               let kind = plain.metadata.sensitiveKind {
-                label = sensitiveLabel(kind)
-            } else if let preview = clip.textPreview {
-                if EmailDetection.detect(in: preview) != nil {
-                    label = "邮箱"
-                } else if DateDetection.detect(in: preview) != nil {
-                    label = "日期"
-                } else {
-                    label = "文本"
-                }
-            } else {
-                label = "文本"
-            }
-        default:
-            label = typeName(clip.primaryType)
-        }
-        return "\(label) · \(time)"
-    }
-
-    private func typeName(_ type: ClipType) -> String {
-        switch type {
-        case .text: return "文本"
-        case .richText: return "富文本"
-        case .image: return "图片"
-        case .file: return "文件"
-        case .url: return "链接"
-        case .code: return "代码"
-        case .color: return "颜色"
-        }
-    }
-
-    private func sensitiveLabel(_ kind: SensitiveKind) -> String {
-        switch kind {
-        case .cardNumber: return "银行卡号"
-        case .apiKey: return "APIKey"
-        }
-    }
-
-    private func previewText(for clip: Clip) -> String {
-        // 链接条目显示完整网址（域名仍用于图标获取与识别）
-        if let textPreview = clip.textPreview, !textPreview.isEmpty {
-            return textPreview
-        }
-        switch clip.primaryType {
-        case .image: return "图片"
-        case .file: return "文件"
-        case .richText: return "富文本"
-        case .url: return "链接"
-        default: return "（空内容）"
-        }
-    }
-
-    private func iconName(for type: ClipType) -> String {
-        switch type {
-        case .text: return "doc.text"
-        case .richText: return "doc.richtext"
-        case .image: return "photo"
-        case .file: return "doc"
-        case .url: return "link"
-        case .code: return "chevron.left.forwardslash.chevron.right"
-        case .color: return "paintpalette"
-        }
-    }
-}
-
-/// 图片缩略图视图：异步加载，失败时显示默认图片图标。
-private struct ThumbnailView: View {
-    let clip: Clip
-    let appState: AppState
-    @State private var imageData: Data?
-
-    var body: some View {
-        Group {
-            if let imageData, let image = NSImage(data: imageData) {
-                Image(nsImage: image)
-                    .resizable()
-                    .interpolation(.high)
-                    .frame(width: 24, height: 24)
-                    .clipShape(RoundedRectangle(cornerRadius: 4))
-            } else {
-                Image(systemName: "photo")
-                    .foregroundStyle(.secondary)
-                    .frame(width: 24, height: 24)
-            }
-        }
-        .task(id: clip.id) {
-            imageData = await appState.thumbnail(for: clip)
-        }
-    }
-}
-
-/// 网站图标视图：异步加载，失败时显示默认链接图标。
-private struct FaviconView: View {
-    let domain: String
-    let fetcher: FaviconFetcher
-    @State private var imageData: Data?
-
-    var body: some View {
-        Group {
-            if let imageData, let image = NSImage(data: imageData) {
-                Image(nsImage: image)
-                    .resizable()
-                    .interpolation(.high)
-                    .frame(width: 16, height: 16)
-            } else {
-                Image(systemName: "link")
-                    .foregroundStyle(.secondary)
-                    .frame(width: 16, height: 16)
-            }
-        }
-        .task(id: domain) {
-            imageData = await fetcher.fetch(domain: domain)
-        }
     }
 }

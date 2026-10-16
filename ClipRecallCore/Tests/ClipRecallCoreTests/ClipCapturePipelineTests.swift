@@ -53,6 +53,37 @@ final class ClipCapturePipelineTests: XCTestCase {
         )
     }
 
+    func testWritePayloadsPreserveFormatOrder() {
+        // 顺序钉死：纯文本 → HTML → RTF → 图片 → 文件（写回顺序影响接收方选用的格式）
+        let formats = [
+            Format(type: FormatUTI.plainText, payload: .inline(Data("文本".utf8))),
+            Format(type: FormatUTI.html, payload: .inline(Data("<b>".utf8))),
+            Format(type: FormatUTI.rtf, payload: .inline(Data("rtf".utf8))),
+            Format(type: FormatUTI.png, payload: .inline(Data([0x89]))),
+            Format(type: FormatUTI.fileURL, payload: .inline(Data("file:///tmp/a.txt\n".utf8))),
+        ]
+        let items = PasteboardWritePayloads.items(from: formats, blobManager: blobManager)
+        XCTAssertEqual(items.map(\.type), [
+            FormatUTI.plainText, FormatUTI.html, FormatUTI.rtf, FormatUTI.png, FormatUTI.fileURL,
+        ])
+    }
+
+    func testUpdateMaskingAppliesToNextCapture() {
+        let pasteboard = FakeTextPasteboard()
+        pasteboard.setString("1234567890123456", forType: FormatUTI.plainText)
+        let store = RecentClipsStore(limit: 10)
+        let pipeline = makePipeline(pasteboard: pasteboard, store: store)
+
+        // 初始：默认后部 50%
+        pipeline.clipboardDidChange(changeCount: 1)
+        XCTAssertEqual(store.clips[0].textPreview, "12345678********")
+
+        // 运行时更新：前部 50%
+        pipeline.updateMasking(ratio: 0.5, position: .leading)
+        pipeline.clipboardDidChange(changeCount: 2)
+        XCTAssertEqual(store.clips[0].textPreview, "********90123456")
+    }
+
     func testExcludedAppIsSkipped() {
         let pasteboard = FakeTextPasteboard()
         pasteboard.setString("密码内容", forType: FormatUTI.plainText)

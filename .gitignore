@@ -23,3 +23,6 @@ build/
 
 # 闭源代码与私有配置（独立私有 git 仓库管理，规则见 docs/architecture.md 第 9 节）
 closed/
+
+# claude code export
+.cc-history
