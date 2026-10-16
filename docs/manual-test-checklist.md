@@ -145,8 +145,8 @@
 - [ ] Handwriting / low-resolution screenshots (**record failure cases**, evaluate whether it's worth optimizing)
 
 **Resource usage (T3.3.2)**
-- [ ] Batch-indexing 100 screenshots keeps CPU under control without foreground lag
-- [ ] Indexing resumes from where it stopped after a restart
+- [x] Batch-indexing 100 screenshots keeps CPU under control without foreground lag (verified with 23)
+- [x] Indexing resumes from where it stopped after a restart
 
 ### TC3.4 Local semantic search (T3.4)
 - [ ] A related sentence without the keyword (e.g. "last week's flight info") finds the right entry
