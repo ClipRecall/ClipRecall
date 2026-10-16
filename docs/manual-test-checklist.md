@@ -112,7 +112,7 @@
 - [ ] Pinned entries are exempt from retention cleanup (with persistence, restart survival no longer distinguishes pinned entries; verify after the settings page T2.6.2)
 - [x] Delete asks for confirmation (batch delete not yet implemented)
 - [x] Clear-all button works with confirmation
-- [ ] Editing an entry then copying yields the edited version
+- ~~[ ] Editing an entry then copying yields the edited version~~（Cancelled 2026-10-16 — low value/high complexity）
 - [ ] Multi-select 3 entries and merge-copy → pastes as one continuous content
 
 ### TC2.5 Global hotkey (T2.5)
