@@ -209,29 +209,73 @@ struct ClipRowView: View {
 // MARK: - 子视图
 
 /// 文件条目图标：文件存在时取其真实图标，不存在时按扩展名取类型图标。
+/// 图标解析（尤其 iCloud/网盘文件）可能走远程服务、阻塞主线程——
+/// 静态缓存（同一路径/类型只解析一次）+ 后台异步加载 + 占位图标，面板打开零阻塞。
 private struct FileIconView: View {
     let clip: Clip
+    @State private var icon: NSImage?
+
+    /// 图标缓存（NSCache 线程安全）。
+    private static let cache = NSCache<NSString, NSImage>()
 
     var body: some View {
-        Image(nsImage: resolvedIcon)
+        Image(nsImage: icon ?? Self.placeholderIcon)
             .resizable()
             .interpolation(.high)
             .frame(width: 20, height: 20)
+            .task(id: cacheKey) {
+                await loadIcon()
+            }
     }
 
-    private var resolvedIcon: NSImage {
+    /// 缓存键：path: 真实文件按路径；type: 文件不存在按扩展名；fallback 通用图标。
+    private var cacheKey: String {
         guard let first = clip.formats
             .first(where: { $0.type == FormatUTI.fileURL })?.metadata.files?.first,
               let url = URL(string: first.url)
-        else {
-            return NSWorkspace.shared.icon(for: .data)
-        }
+        else { return "fallback" }
         if FileManager.default.fileExists(atPath: url.path) {
-            return NSWorkspace.shared.icon(forFile: url.path)
+            return "path:\(url.path)"
         }
-        let type = UTType(filenameExtension: url.pathExtension) ?? .data
-        return NSWorkspace.shared.icon(for: type)
+        return "type:\(url.pathExtension)"
     }
+
+    private func loadIcon() async {
+        let key = cacheKey
+        if let cached = Self.cache.object(forKey: key as NSString) {
+            icon = cached
+            return
+        }
+        icon = nil   // 占位（若行被复用仍持有旧图）
+        let resolved = await Task.detached(priority: .userInitiated) {
+            Self.resolveIcon(for: key)
+        }.value
+        guard !Task.isCancelled, let image = resolved?.image else { return }
+        Self.cache.setObject(image, forKey: key as NSString)
+        icon = image
+    }
+
+    /// 解析图标（后台线程调用；NSImage 自 10.6 起只读使用线程安全）。
+    nonisolated private static func resolveIcon(for key: String) -> SendableNSImage? {
+        if key.hasPrefix("path:") {
+            return SendableNSImage(
+                image: NSWorkspace.shared.icon(forFile: String(key.dropFirst("path:".count)))
+            )
+        }
+        if key.hasPrefix("type:") {
+            let ext = String(key.dropFirst("type:".count))
+            let type = UTType(filenameExtension: ext) ?? .data
+            return SendableNSImage(image: NSWorkspace.shared.icon(for: type))
+        }
+        return SendableNSImage(image: NSWorkspace.shared.icon(for: .data))
+    }
+
+    private static let placeholderIcon = NSWorkspace.shared.icon(for: .data)
+}
+
+/// NSImage 跨并发域传递的封装（只读使用线程安全，见 Apple 文档）。
+private struct SendableNSImage: @unchecked Sendable {
+    let image: NSImage
 }
 
 /// 颜色条目色块。
