@@ -140,8 +140,8 @@
 ### TC3.3 Image OCR (T3.3)
 
 **Accuracy (T3.3.1 / T3.3.3)**
-- [ ] Chinese screenshot content is searchable by keyword
-- [ ] English screenshot content is searchable by keyword
+- [x] Chinese screenshot content is searchable by keyword
+- [x] English screenshot content is searchable by keyword
 - [ ] Handwriting / low-resolution screenshots (**record failure cases**, evaluate whether it's worth optimizing)
 
 **Resource usage (T3.3.2)**
