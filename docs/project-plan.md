@@ -167,7 +167,7 @@
 
 | # | ✅ | Task | Deliverable | Manual test |
 |---|---|---|---|---|
-| T2.5.1 | [ ] | Hotkey registration | Carbon hotkey wrapper | TC2.5 |
+| T2.5.1 | [x] | Hotkey registration | Carbon hotkey wrapper | TC2.5 |
 | T2.5.2 | [ ] | Configuration & conflict detection | settings-page rebinding + conflict hints | TC2.5 |
 
 ### T2.6 Settings page
